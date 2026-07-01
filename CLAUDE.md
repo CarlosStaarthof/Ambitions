@@ -2,6 +2,8 @@
 
 Guidance for AI agents (Claude Code and others) working in this repository. Keep this file current when architecture, conventions, or invariants change.
 
+Deeper context lives in [docs/](docs/): [ROADMAP-V2.md](docs/ROADMAP-V2.md) (multi-provider AI, no-AI mode, accounts, and the open decisions), [BEST-PRACTICES.md](docs/BEST-PRACTICES.md), [PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md), and [WORKING-WITH-CLAUDE-CODE.md](docs/WORKING-WITH-CLAUDE-CODE.md).
+
 ## What this is
 
 **My Time** — a local-first weekly time-planner and monthly reflection tool. The web app is a Vite + React + Tailwind SPA; it ships as an installable PWA and is wrapped for Android/iOS with Capacitor. All user data lives on the device (IndexedDB via localForage); the JSON export is the only backup. AI features call Claude through a serverless proxy and only work online.
@@ -37,7 +39,7 @@ There is **no test runner, linter, or type-checker configured.** Don't claim "te
 
 ### Data model & storage keys
 
-localForage instance `my-time` / store `kv`, four keys:
+localForage instance `my-time` / store `kv`, five keys:
 
 | key | shape |
 | --- | --- |
@@ -45,6 +47,7 @@ localForage instance `my-time` / store `kv`, four keys:
 | `questions` | `[{ id, text }]` |
 | `weeks` | `{ [isoMondayDate]: { cells: { "<dayIdx>-<slot>": taskId } } }` |
 | `reflections` | `{ [yyyy-mm]: { [questionId]: answerText, _ai?: aiText } }` |
+| `settings` | `{ ai: { enabled, provider, model } }` — app prefs; drives the "AI or no-AI" mode |
 
 - Week keys are the ISO date of that week's Monday (`isoDate(mondayOf(d))`). Cell keys are `` `${dayIndex}-${slot}` `` where dayIndex 0–6 = Mon–Sun and slot 0–47 = 00:00–23:30.
 - `_ai` is a **reserved key** inside a month's reflections object — it stores Claude's generated response, not a user answer. Code that iterates answers must skip `_ai` (see how `answeredCount` filters by the real `questions` list).
@@ -53,7 +56,8 @@ localForage instance `my-time` / store `kv`, four keys:
 ## AI integration (read before touching anything AI-related)
 
 - **The Anthropic API key NEVER lives in the client.** The browser calls a same-origin/configured proxy ([api/ai.js](api/ai.js)) that holds `ANTHROPIC_API_KEY` server-side and forwards to the Anthropic Messages API. Do not add the key to `.env`, the React app, or any committed file. `VITE_*` vars are bundled into client JS and are public by definition.
-- **Client entry point** is `callClaude(content)` in [src/lib/ai.js](src/lib/ai.js): it short-circuits with `throw new Error("offline")` when `navigator.onLine` is false, POSTs `{ content }` to `VITE_AI_PROXY_URL` (default `/api/ai`), and flattens the Anthropic `content` blocks to text. AI buttons are disabled while `!online`.
+- **Provider-agnostic dispatcher.** [src/lib/ai.js](src/lib/ai.js) exposes `callAI(content, settings.ai)`, which routes to a per-provider adapter based on `settings.ai.provider`; [src/lib/providers.js](src/lib/providers.js) is the catalog (Anthropic/OpenAI/Google + a `none` option). `enabled:false` or `provider:"none"` throws `ai-disabled` — that's the intended **no-AI mode**. Every adapter still goes through the proxy so no key touches the client. Only Anthropic is wired up today; OpenAI/Google adapters throw a clear "not connected yet" error.
+- **Backward-compatible entry point** is `callClaude(content)` (a thin wrapper over `callAI(..., { provider: "anthropic" })`), used by the existing tabs. It short-circuits with `throw new Error("offline")` when offline. AI buttons are disabled while `!online`. New code should call `callAI` with `settings.ai`.
 - **Prompts live with the feature, not in a shared file.** The two personas are inline strings in [src/components/BalanceTab.jsx](src/components/BalanceTab.jsx) (`askCoach`) and [src/components/GuidingTab.jsx](src/components/GuidingTab.jsx) (`bounceGuiding`). They encode the basic-first / ambition-second philosophy — preserve that framing if you edit them.
 - **Model** is set once, server-side, in `api/ai.js` (`claude-sonnet-4-6`). Change it there only; the client never names a model. For current model ids and the API contract, consult the `claude-api` skill rather than guessing.
 
