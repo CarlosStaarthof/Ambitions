@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icons/*"],
       manifest: {
-        name: "My Time",
-        short_name: "My Time",
+        name: "Tiempo",
+        short_name: "Tiempo",
         description: "Plan and reflect on your finite week.",
         theme_color: "#000000",
         background_color: "#000000",

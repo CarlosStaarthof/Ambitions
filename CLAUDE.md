@@ -6,7 +6,7 @@ Deeper context lives in [docs/](docs/): [ROADMAP-V2.md](docs/ROADMAP-V2.md) (mul
 
 ## What this is
 
-**My Time** — a local-first weekly time-planner and monthly reflection tool. The web app is a Vite + React + Tailwind SPA; it ships as an installable PWA and is wrapped for Android/iOS with Capacitor. All user data lives on the device (IndexedDB via localForage); the JSON export is the only backup. AI features call Claude through a serverless proxy and only work online.
+**Tiempo** — a local-first weekly time-planner and monthly reflection tool. The web app is a Vite + React + Tailwind SPA; it ships as an installable PWA and is wrapped for Android/iOS with Capacitor. All user data lives on the device (IndexedDB via localForage); the JSON export is the only backup. AI features call Claude through a serverless proxy and only work online.
 
 ## Product philosophy (don't break these assumptions)
 
@@ -39,7 +39,7 @@ There is **no test runner, linter, or type-checker configured.** Don't claim "te
 
 ### Data model & storage keys
 
-localForage instance `my-time` / store `kv`, five keys:
+localForage instance `my-time` (legacy id — kept so V1 data survives the Tiempo rename; do not change it) / store `kv`, five keys:
 
 | key | shape |
 | --- | --- |

@@ -41,7 +41,7 @@ export default function App() {
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-amber-500 text-black flex items-center justify-center"><Calendar size={18} /></div>
             <div>
-              <h1 className="text-xl font-semibold leading-tight">My Time</h1>
+              <h1 className="text-xl font-semibold leading-tight">Tiempo</h1>
               <p className="text-xs text-zinc-500">Mon–Sun · every cell is 30 minutes of your finite week.</p>
             </div>
           </div>

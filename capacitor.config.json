@@ -1,6 +1,6 @@
 {
   "appId": "com.carlos.mytime",
-  "appName": "My Time",
+  "appName": "Tiempo",
   "webDir": "dist",
   "server": { "androidScheme": "https" }
 }

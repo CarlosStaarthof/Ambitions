@@ -21,7 +21,7 @@ export default function DataTab({ tasks, questions, weeks, reflections, setTasks
       <div className={card + " p-4 space-y-3"}>
         <div className="text-sm font-medium">Your data is yours</div>
         <p className="text-xs text-zinc-500">Everything is stored on this device. Export regularly — the file is the real backup.</p>
-        <button onClick={() => download("my-time.json", JSON.stringify({ version: 3, exportedAt: new Date().toISOString(), tasks, questions, weeks, reflections }, null, 2), "application/json")} className={btnPrimary}><Download size={14} /> Export JSON</button>
+        <button onClick={() => download("tiempo.json", JSON.stringify({ version: 3, exportedAt: new Date().toISOString(), tasks, questions, weeks, reflections }, null, 2), "application/json")} className={btnPrimary}><Download size={14} /> Export JSON</button>
       </div>
       <div className={card + " p-4 space-y-3"}>
         <div className="text-sm font-medium">Import</div>

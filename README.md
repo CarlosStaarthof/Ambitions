@@ -1,4 +1,4 @@
-# My Time
+# Tiempo
 
 A local-first weekly time-planner and monthly reflection tool. Web + installable PWA + Android/iOS via Capacitor. All data lives on-device; the JSON export is the backup. AI features call Claude through a serverless proxy and only work online.
 
@@ -37,7 +37,7 @@ In Android Studio: plug in your phone (USB debugging on) and press Run to instal
 ## Signed release + sharing (sideload)
 1. Create a keystore ONCE and back it up safely (lose it = you can't update your own app):
    ```bash
-   keytool -genkey -v -keystore my-time.keystore -alias mytime -keyalg RSA -keysize 2048 -validity 10000
+   keytool -genkey -v -keystore tiempo.keystore -alias tiempo -keyalg RSA -keysize 2048 -validity 10000
    ```
 2. Configure signing in `android/app/build.gradle` (release `signingConfig`).
 3. Build a signed APK (`assembleRelease`) to sideload, or an AAB for Play (`bundleRelease`).
