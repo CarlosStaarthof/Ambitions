@@ -7,7 +7,7 @@ import { useArmed } from "../lib/useArmed";
 
 function FragmentRow({ children }) { return <>{children}</>; }
 
-export default function WeekTab({ tasks, weeks, setWeeksP, weekStart, setWeekStart }) {
+export default function WeekTab({ tasks, categories, weeks, setWeeksP, weekStart, setWeekStart }) {
   const [brush, setBrush] = useState(null);
   const paintingRef = useRef(false);
   const { arm, isArmed } = useArmed();
@@ -17,7 +17,7 @@ export default function WeekTab({ tasks, weeks, setWeeksP, weekStart, setWeekSta
   const weekKey = isoDate(weekStart);
   const weekCells = useMemo(() => (weeks[weekKey] && weeks[weekKey].cells) || {}, [weeks, weekKey]);
   const taskById = (id) => tasks.find((t) => t.id === id);
-  const { basicH, ambitionH, freeH } = weekStatsOf(weekCells, tasks);
+  const { ambitionH, committedH, freeH } = weekStatsOf(weekCells, tasks, categories);
 
   function applyBrush(d, s) {
     if (brush == null) return;
@@ -34,7 +34,7 @@ export default function WeekTab({ tasks, weeks, setWeeksP, weekStart, setWeekSta
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        {[["Basic", basicH, "text-zinc-100"], ["Ambition", ambitionH, "text-amber-400"], ["Free", freeH, "text-zinc-400"]].map(([l, v, c]) => (
+        {[["Ambition", ambitionH, "text-amber-400"], ["Committed", committedH, "text-zinc-100"], ["Free", freeH, "text-zinc-400"]].map(([l, v, c]) => (
           <div key={l} className={card + " p-3 text-center"}><div className={"text-2xl font-semibold " + c}>{v}h</div><div className="text-xs text-zinc-500">{l}</div></div>
         ))}
       </div>

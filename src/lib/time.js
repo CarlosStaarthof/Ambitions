@@ -1,4 +1,4 @@
-import { SLOTS, CELLS } from "./seed";
+import { SLOTS, CELLS, PALETTE } from "./seed";
 
 export const pad = (n) => String(n).padStart(2, "0");
 export const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -29,12 +29,24 @@ export function mergeDay(cells, dayIdx) {
   return blocks;
 }
 
-export function weekStatsOf(weekCells, tasks) {
+export function weekStatsOf(weekCells, tasks, categories = []) {
   const counts = {}; Object.values(weekCells).forEach((id) => { counts[id] = (counts[id] || 0) + 1; });
   const hoursOf = (id) => (counts[id] || 0) * 0.5;
-  const basicH = tasks.filter((t) => t.category === "basic").reduce((a, t) => a + hoursOf(t.id), 0);
-  const ambitionH = tasks.filter((t) => t.category === "ambition").reduce((a, t) => a + hoursOf(t.id), 0);
+  const protectedIds = new Set(categories.filter((c) => c.protected).map((c) => c.id));
+  const ambitionH = tasks.filter((t) => protectedIds.has(t.categoryId)).reduce((a, t) => a + hoursOf(t.id), 0);
+  const committedH = tasks.filter((t) => !protectedIds.has(t.categoryId)).reduce((a, t) => a + hoursOf(t.id), 0);
   const filled = Object.keys(weekCells).length;
   const freeH = (CELLS - filled) * 0.5;
-  return { counts, hoursOf, basicH, ambitionH, freeH, filled };
+  const byCategory = {};
+  categories.forEach((c) => { byCategory[c.id] = tasks.filter((t) => t.categoryId === c.id).reduce((a, t) => a + hoursOf(t.id), 0); });
+  return { counts, hoursOf, ambitionH, committedH, freeH, filled, byCategory, protectedIds };
+}
+
+// Pick a color not already used by an existing task. Falls back to a random,
+// pleasant mid-range color once the fixed palette is exhausted.
+export function nextColor(used) {
+  const taken = new Set(used);
+  for (const c of PALETTE) if (!taken.has(c)) return c;
+  const chan = () => (60 + Math.floor(Math.random() * 150)).toString(16).padStart(2, "0");
+  return `#${chan()}${chan()}${chan()}`;
 }

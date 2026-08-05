@@ -6,15 +6,16 @@ import { DAYS, MONTHS } from "../lib/seed";
 import { card, btnPrimary, selectCls, TIP } from "../lib/ui";
 import { callClaude } from "../lib/ai";
 
-export default function BalanceTab({ tasks, weeks, weekStart, questions, reflections, setReflectionsP, online, aiEnabled }) {
+export default function BalanceTab({ tasks, categories, weeks, weekStart, questions, reflections, setReflectionsP, online, aiEnabled }) {
   const [coach, setCoach] = useState({ loading: false, text: "", error: "" });
   const [balSel, setBalSel] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
 
   const weekKey = isoDate(weekStart);
   const weekCells = (weeks[weekKey] && weeks[weekKey].cells) || {};
-  const { hoursOf, basicH, ambitionH, freeH } = weekStatsOf(weekCells, tasks);
+  const { hoursOf, ambitionH, committedH, freeH } = weekStatsOf(weekCells, tasks, categories);
   const taskById = (id) => tasks.find((t) => t.id === id);
-  const ambitionTasks = tasks.filter((t) => t.category === "ambition");
+  const protectedIds = new Set(categories.filter((c) => c.protected).map((c) => c.id));
+  const ambitionTasks = tasks.filter((t) => protectedIds.has(t.categoryId));
   const taskHoursData = tasks.map((t) => ({ code: codeFor(t.name), hours: hoursOf(t.id), color: t.color })).filter((d) => d.hours > 0);
 
   const balKey = monthKeyOf(balSel);
@@ -26,8 +27,8 @@ export default function BalanceTab({ tasks, weeks, weekStart, questions, reflect
     try {
       const lines = DAYS.map((dn, di) => { const blocks = mergeDay(weekCells, di).filter((b) => b.taskId); if (!blocks.length) return `${dn}: (empty)`; return `${dn}: ` + blocks.map((b) => `${slotLabel(b.start)}-${endLabel(b.end)} ${(taskById(b.taskId) || {}).name || "?"}`).join("; "); }).join("\n");
       const targets = ambitionTasks.map((t) => `- ${t.name}: scheduled ${hoursOf(t.id)}h${t.target ? `, target ${t.target}h` : ""}`).join("\n");
-      const persona = "You are a pragmatic weekly time coach. The person's rule is firm: basic needs (sleep, work, meals, exercise) are non-negotiable and come first; ambition tasks (learning, reading, side projects) must be protected and grown toward weekly targets. Time is the only real unit — each slot is 30 minutes of a finite 7-day week (Mon–Sun). Read their schedule, never sacrifice basic needs, and propose concrete moves: name the exact day and 30-minute slots to convert to which ambition task to close the gap to targets, preferring unallocated time. Be specific and brief — a short list of concrete suggestions, then one sentence of encouragement. No generic advice.";
-      const task = `My week (Mon–Sun, blank = unallocated):\n${lines}\n\nAmbition plans:\n${targets || "(none set)"}\n\nTotals — basic ${basicH}h, ambition ${ambitionH}h, unallocated ${freeH}h.`;
+      const persona = "You are a pragmatic weekly time coach. The person protects one thing above all: their Ambition time (learning, side projects, growth) — it must be grown toward its weekly targets. Everything else on the calendar is the committed reality of life (sleep, work, health, meals, and whatever categories they've set) and should not be sacrificed. Time is the only real unit — each slot is 30 minutes of a finite 7-day week (Mon–Sun). Read their schedule and propose concrete moves: name the exact day and 30-minute slots (preferring unallocated time) to convert to which ambition task to close the gap to targets, without cutting committed essentials. Be specific and brief — a short list of concrete suggestions, then one sentence of encouragement. No generic advice.";
+      const task = `My week (Mon–Sun, blank = unallocated):\n${lines}\n\nAmbition plans:\n${targets || "(none set)"}\n\nTotals — ambition ${ambitionH}h, committed ${committedH}h, unallocated ${freeH}h.`;
       const text = await callClaude(persona + "\n\n" + task);
       setCoach({ loading: false, text, error: "" });
     } catch (e) { setCoach({ loading: false, text: "", error: e.message === "offline" ? "You're offline — connect to use this." : (e.message || "Something went wrong.") }); }
@@ -36,7 +37,7 @@ export default function BalanceTab({ tasks, weeks, weekStart, questions, reflect
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-2">
-        {[["Basic", basicH, "text-zinc-100"], ["Ambition", ambitionH, "text-amber-400"], ["Free", freeH, "text-zinc-400"]].map(([l, v, c]) => (
+        {[["Ambition", ambitionH, "text-amber-400"], ["Committed", committedH, "text-zinc-100"], ["Free", freeH, "text-zinc-400"]].map(([l, v, c]) => (
           <div key={l} className={card + " p-3 text-center"}><div className={"text-2xl font-semibold " + c}>{v}h</div><div className="text-xs text-zinc-500">{l}</div></div>
         ))}
       </div>

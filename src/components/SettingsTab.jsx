@@ -31,10 +31,12 @@ export default function SettingsTab({ store }) {
 
       <DataTab
         tasks={store.tasks}
+        categories={store.categories}
         questions={store.questions}
         weeks={store.weeks}
         reflections={store.reflections}
         setTasksP={store.setTasksP}
+        setCategoriesP={store.setCategoriesP}
         setQuestionsP={store.setQuestionsP}
         setWeeksP={store.setWeeksP}
         setReflectionsP={store.setReflectionsP}

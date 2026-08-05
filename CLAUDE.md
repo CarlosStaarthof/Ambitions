@@ -10,12 +10,12 @@ Deeper context lives in [docs/](docs/): [ROADMAP-V2.md](docs/ROADMAP-V2.md) (mul
 
 ## Product philosophy (don't break these assumptions)
 
-The whole app rests on one idea: **a week is finite — 7 days × 48 half-hour slots = 336 cells of 30 minutes each.** Tasks are split into two categories that are load-bearing across the UI and the AI prompts:
+The whole app rests on one idea: **a week is finite — 7 days × 48 half-hour slots = 336 cells of 30 minutes each.** Time is organized into user-defined **categories**, each holding **tasks**:
 
-- **basic** — sleep, work, meals, exercise. Non-negotiable, come first.
-- **ambition** — learning, reading, side projects. Protected and grown toward weekly targets.
+- **Ambition** — the one protected, highest-priority track (the category with `protected: true`, fixed id `ambition`). Always kept first, never deletable; grown toward per-task weekly targets.
+- **Everything else** — as many categories as the user wants (Sleep, Work, Health, Meals…). These are the committed realities of life; the app calls their scheduled hours "Committed".
 
-If you change the category model, the seed data, the AI personas, and the Balance/Tasks tabs all have to move together.
+"Ambition-first" is load-bearing across the Week/Balance stat cards (Ambition · Committed · Free) and the AI coach persona. If you change the category model, move the seed data, the `normalizeModel()` migration, the AI personas, and the Week/Balance/Tasks tabs together.
 
 ## Commands
 
@@ -43,7 +43,8 @@ localForage instance `my-time` (legacy id — kept so V1 data survives the Tiemp
 
 | key | shape |
 | --- | --- |
-| `tasks` | `[{ id, name, category: "basic"\|"ambition", color, target: number\|null }]` |
+| `categories` | `[{ id, name, protected: bool }]` — Ambition (`protected:true`) is first & not deletable |
+| `tasks` | `[{ id, name, categoryId, color, target: number\|null }]` |
 | `questions` | `[{ id, text }]` |
 | `weeks` | `{ [isoMondayDate]: { cells: { "<dayIdx>-<slot>": taskId } } }` |
 | `reflections` | `{ [yyyy-mm]: { [questionId]: answerText, _ai?: aiText } }` |
@@ -51,7 +52,7 @@ localForage instance `my-time` (legacy id — kept so V1 data survives the Tiemp
 
 - Week keys are the ISO date of that week's Monday (`isoDate(mondayOf(d))`). Cell keys are `` `${dayIndex}-${slot}` `` where dayIndex 0–6 = Mon–Sun and slot 0–47 = 00:00–23:30.
 - `_ai` is a **reserved key** inside a month's reflections object — it stores Claude's generated response, not a user answer. Code that iterates answers must skip `_ai` (see how `answeredCount` filters by the real `questions` list).
-- The export envelope is `{ version: 3, exportedAt, tasks, questions, weeks, reflections }`. Bump `version` and handle migration in `DataTab` import if you change any shape.
+- The export envelope is `{ version: 4, exportedAt, tasks, categories, questions, weeks, reflections }`. `normalizeModel()` in `seed.js` migrates old shapes (incl. V1 `task.category`) forward on both load and import — extend it and bump `version` if you change any shape.
 
 ## AI integration (read before touching anything AI-related)
 
