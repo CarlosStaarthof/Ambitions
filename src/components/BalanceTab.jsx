@@ -6,7 +6,7 @@ import { DAYS, MONTHS } from "../lib/seed";
 import { card, btnPrimary, selectCls, TIP } from "../lib/ui";
 import { callClaude } from "../lib/ai";
 
-export default function BalanceTab({ tasks, weeks, weekStart, questions, reflections, setReflectionsP, online }) {
+export default function BalanceTab({ tasks, weeks, weekStart, questions, reflections, setReflectionsP, online, aiEnabled }) {
   const [coach, setCoach] = useState({ loading: false, text: "", error: "" });
   const [balSel, setBalSel] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
 
@@ -67,6 +67,7 @@ export default function BalanceTab({ tasks, weeks, weekStart, questions, reflect
         </div>
       )}
 
+      {aiEnabled && (
       <div className={card + " p-4 space-y-3"}>
         <div className="flex items-center gap-1.5 text-sm font-medium"><Sparkles size={15} className="text-amber-400" /> Make room for ambition</div>
         <p className="text-xs text-zinc-500">Sends this week to Claude. It keeps your basic needs intact and points to exact slots you could give to ambition.</p>
@@ -74,6 +75,7 @@ export default function BalanceTab({ tasks, weeks, weekStart, questions, reflect
         {coach.error && <div className="text-xs text-red-400">{coach.error}</div>}
         {coach.text && <div className="border border-amber-500 bg-zinc-900 rounded-xl p-3 text-sm text-zinc-200 whitespace-pre-wrap leading-relaxed">{coach.text}</div>}
       </div>
+      )}
 
       <div className={card + " p-4 space-y-3"}>
         <div className="flex items-center justify-between gap-2">

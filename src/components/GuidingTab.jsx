@@ -5,7 +5,7 @@ import { card, inputCls, selectCls, btnPrimary, btnGhost } from "../lib/ui";
 import { useArmed } from "../lib/useArmed";
 import { callClaude } from "../lib/ai";
 
-export default function GuidingTab({ questions, setQuestionsP, reflections, setReflectionsP, online }) {
+export default function GuidingTab({ questions, setQuestionsP, reflections, setReflectionsP, online, aiEnabled }) {
   const [monthSel, setMonthSel] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [editQ, setEditQ] = useState(false);
   const [gCoach, setGCoach] = useState({ loading: false, error: "" });
@@ -69,7 +69,7 @@ export default function GuidingTab({ questions, setQuestionsP, reflections, setR
 
       {editQ ? (
         <button onClick={() => setQuestionsP([...questions, { id: uid(), text: "" }])} className={btnGhost}><Plus size={14} /> Add question</button>
-      ) : (
+      ) : aiEnabled ? (
         <div className={card + " p-4 space-y-3"}>
           <div className="flex items-center gap-1.5 text-sm font-medium"><Sparkles size={15} className="text-amber-400" /> Bounce it off Claude</div>
           <p className="text-xs text-zinc-500">Claude reads this month's answers and bounces back — patterns it notices, a couple of sharp questions, an angle you might be missing.</p>
@@ -77,7 +77,7 @@ export default function GuidingTab({ questions, setQuestionsP, reflections, setR
           {gCoach.error && <div className="text-xs text-red-400">{gCoach.error}</div>}
           {monthAnswers._ai && <div className="border border-amber-500 bg-zinc-900 rounded-xl p-3 text-sm text-zinc-200 whitespace-pre-wrap leading-relaxed">{monthAnswers._ai}</div>}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
