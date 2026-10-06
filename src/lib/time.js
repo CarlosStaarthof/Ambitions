@@ -29,17 +29,35 @@ export function mergeDay(cells, dayIdx) {
   return blocks;
 }
 
+// Walks the CELLS, not the task list. Iterating `tasks` used to drop the hours of a
+// cell whose task had gone from the array into neither Ambition nor Committed while
+// `filled` still counted it, so the three cards quietly stopped summing to 168 — which
+// is what made an orphaned cell invisible. Each id is now resolved exactly once through
+// an id→task map, so a duplicate id in `tasks` cannot double-count either.
 export function weekStatsOf(weekCells, tasks, categories = []) {
-  const counts = {}; Object.values(weekCells).forEach((id) => { counts[id] = (counts[id] || 0) + 1; });
+  const cells = weekCells || {};
+  const counts = {}; Object.values(cells).forEach((id) => { counts[id] = (counts[id] || 0) + 1; });
   const hoursOf = (id) => (counts[id] || 0) * 0.5;
-  const protectedIds = new Set(categories.filter((c) => c.protected).map((c) => c.id));
-  const ambitionH = tasks.filter((t) => protectedIds.has(t.categoryId)).reduce((a, t) => a + hoursOf(t.id), 0);
-  const committedH = tasks.filter((t) => !protectedIds.has(t.categoryId)).reduce((a, t) => a + hoursOf(t.id), 0);
-  const filled = Object.keys(weekCells).length;
-  const freeH = (CELLS - filled) * 0.5;
+  const protectedIds = new Set((categories || []).filter((c) => c.protected).map((c) => c.id));
+  const byId = new Map();
+  for (const t of tasks || []) if (t && !byId.has(t.id)) byId.set(t.id, t);
+
   const byCategory = {};
-  categories.forEach((c) => { byCategory[c.id] = tasks.filter((t) => t.categoryId === c.id).reduce((a, t) => a + hoursOf(t.id), 0); });
-  return { counts, hoursOf, ambitionH, committedH, freeH, filled, byCategory, protectedIds };
+  (categories || []).forEach((c) => { byCategory[c.id] = 0; });
+  let ambitionH = 0, committedH = 0, unknownH = 0;
+  const unknown = [];
+  for (const id of Object.keys(counts)) {
+    const h = counts[id] * 0.5;
+    const t = byId.get(id);
+    // domain-model rule 2: a scheduled cell that cannot be shown to be Ambition is
+    // Committed. Never inflate Ambition with a cell we cannot identify.
+    if (!t) { committedH += h; unknownH += h; unknown.push(id); continue; }
+    if (protectedIds.has(t.categoryId)) ambitionH += h; else committedH += h;
+    if (byCategory[t.categoryId] !== undefined) byCategory[t.categoryId] += h;
+  }
+  const filled = Object.keys(cells).length;
+  const freeH = (CELLS - filled) * 0.5;
+  return { counts, hoursOf, ambitionH, committedH, freeH, filled, byCategory, protectedIds, unknownH, unknownIds: unknown.sort() };
 }
 
 // Pick a color not already used by an existing task. Falls back to a random,
@@ -49,4 +67,31 @@ export function nextColor(used) {
   for (const c of PALETTE) if (!taken.has(c)) return c;
   const chan = () => (60 + Math.floor(Math.random() * 150)).toString(16).padStart(2, "0");
   return `#${chan()}${chan()}${chan()}`;
+}
+
+// Targets and totals are stored as decimal hours (0.5 = 30 min) because the grid
+// is half-hour cells, but people think in H:MM. These convert at the UI edge only —
+// the stored shape never changes.
+export function fmtHM(h) {
+  if (h == null || isNaN(h)) return "";
+  const total = Math.round(Number(h) * 60);
+  const sign = total < 0 ? "-" : "";
+  const abs = Math.abs(total);
+  return `${sign}${Math.floor(abs / 60)}:${pad(abs % 60)}`;
+}
+
+// Accepts "1:30", "1.5" or "90m" and returns decimal hours (null when blank).
+export function parseHM(text) {
+  const t = String(text == null ? "" : text).trim();
+  if (!t) return null;
+  if (t.includes(":")) {
+    const [hh, mm] = t.split(":");
+    const h = parseInt(hh || "0", 10);
+    const m = parseInt(mm || "0", 10);
+    if (isNaN(h) || isNaN(m)) return null;
+    return h + Math.min(59, Math.max(0, m)) / 60;
+  }
+  if (/m$/i.test(t)) { const m = parseFloat(t); return isNaN(m) ? null : m / 60; }
+  const n = Number(t.replace(",", "."));
+  return isNaN(n) ? null : n;
 }

@@ -5,8 +5,8 @@ export default function AccountTab() {
   return (
     <div className="space-y-4">
       <div className={card + " p-4 space-y-2"}>
-        <div className="flex items-center gap-2 text-sm font-medium"><User size={16} className="text-amber-400" /> Your Tiempo account</div>
-        <p className="text-xs text-zinc-500 leading-relaxed">Sign-in is coming in the next phase. It will be <span className="text-zinc-300">optional</span> — Tiempo works fully offline without it — and used to sync your plan and your AI connections across devices.</p>
+        <div className="flex items-center gap-2 text-sm font-medium"><User size={16} className="text-amber-400" /> Your Ambitions account</div>
+        <p className="text-xs text-zinc-500 leading-relaxed">Sign-in is coming in the next phase. It will be <span className="text-zinc-300">optional</span> — Ambitions works fully offline without it — and used to sync your plan and your AI connections across devices.</p>
       </div>
       <div className={card + " p-4 space-y-2"}>
         <div className="flex items-center gap-2 text-sm font-medium"><KeyRound size={16} className="text-amber-400" /> AI connections</div>

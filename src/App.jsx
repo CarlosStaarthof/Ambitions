@@ -2,15 +2,19 @@ import { useState, useEffect } from "react";
 import { Menu as MenuIcon } from "lucide-react";
 import { useStore } from "./lib/useStore";
 import { mondayOf, pad } from "./lib/time";
+import { NONE } from "./lib/providers";
+import { card } from "./lib/ui";
+import { REMINDER_SOURCES, HORIZON, plannedReminders } from "./lib/reminders";
+import { syncReminders } from "./lib/notify";
 import AppMenu from "./components/AppMenu";
 import WeekTab from "./components/WeekTab";
 import TasksTab from "./components/TasksTab";
 import BalanceTab from "./components/BalanceTab";
 import GuidingTab from "./components/GuidingTab";
-import AccountTab from "./components/AccountTab";
+import VisionTab from "./components/VisionTab";
 import SettingsTab from "./components/SettingsTab";
 
-const SECTION_LABEL = { account: "Account", plan: "Plan & Balance", tasks: "Task & Questions", settings: "Settings", logout: "Logout" };
+const SECTION_LABEL = { plan: "Plan & Balance", tasks: "Task & Questions", vision: "Vision Board", settings: "Settings" };
 
 function SubTabs({ value, onChange, tabs }) {
   return (
@@ -39,55 +43,76 @@ export default function App() {
     return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
   }, []);
 
+  // Reminder schedules are re-derived, never remembered: Android drops pending
+  // alarms on reboot, force-stop and clock changes, so the whole plan is recomputed
+  // from today and reconciled against the OS on load and on every return to the
+  // foreground. syncReminders is a no-op on web and when permission is not granted.
+  const { loading, storageError, settings, reflections, questions } = store;
+  useEffect(() => {
+    // Nothing is derived from a store we could not read — not even a notification.
+    if (loading || storageError) return;
+    const sync = () => syncReminders(plannedReminders(REMINDER_SOURCES, settings, new Date(), HORIZON, { reflections, questions }));
+    sync();
+    const onVis = () => { if (document.visibilityState === "visible") sync(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [loading, storageError, settings, reflections, questions]);
+
   if (store.loading) return <div className="min-h-screen bg-black flex items-center justify-center text-zinc-500">loading…</div>;
 
+  // A read failed, so what is on disk is unknown. Render one message and nothing else:
+  // no tabs means no setter is reachable, and the saved data stays exactly as it is.
+  // Severe on purpose — editing a partly-read store is how history gets overwritten.
+  if (storageError) return (
+    <div className="min-h-screen bg-black flex items-center justify-center px-6">
+      <div className={card + " p-4 max-w-sm text-sm text-zinc-300 leading-relaxed"}>
+        Could not read your saved data. Nothing has been changed. Close the app and open it again.
+      </div>
+    </div>
+  );
+
   const clock = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-  const aiEnabled = !!(store.settings && store.settings.ai && store.settings.ai.enabled);
+  // AI UI only appears when it can actually run: switched on, a real provider, and a
+  // key on file for that provider. Otherwise the buttons would just error on tap.
+  // Keys live in secure storage, not in settings — recombined here for the adapters.
+  const ai = { ...((store.settings && store.settings.ai) || {}), keys: store.aiKeys || {} };
+  const aiEnabled = !!ai.enabled && ai.provider !== NONE && !!ai.keys[ai.provider];
   const go = (id) => { setSection(id); setMenuOpen(false); };
 
   return (
     <div className="min-h-screen bg-black text-zinc-100">
       <AppMenu open={menuOpen} section={section} onSelect={go} onClose={() => setMenuOpen(false)} />
 
-      <div className="max-w-3xl mx-auto px-3 pb-16">
-        <header className="pt-5 pb-3 flex items-center justify-between gap-3">
+      <div className="max-w-3xl mx-auto px-3 pb-safe">
+        <header className="pt-safe pb-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <button onClick={() => setMenuOpen(true)} aria-label="Open menu" className="p-2 -ml-1 rounded-lg text-zinc-300 hover:bg-zinc-900 shrink-0"><MenuIcon size={20} /></button>
-            <div className="min-w-0">
-              <h1 className="text-lg font-semibold leading-tight truncate">{SECTION_LABEL[section] || "Tiempo"}</h1>
-              <p className="text-[11px] text-zinc-500">Tiempo · Mon–Sun, 30-minute cells.</p>
-            </div>
+            <h1 className="text-lg font-semibold leading-tight truncate">{SECTION_LABEL[section] || "Ambitions"}</h1>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-amber-400 font-mono text-sm tracking-wide shrink-0">{clock}</div>
         </header>
 
-        {!online && <div className="mb-3 text-xs bg-zinc-900 border border-zinc-700 text-zinc-400 rounded-lg p-2">Offline — everything works except the AI features.</div>}
-
-        {section === "account" && <AccountTab />}
+        {!online && <div className="mb-3 text-xs bg-zinc-900 border border-zinc-700 text-zinc-400 rounded-lg p-2">{aiEnabled ? "Offline — everything works except the AI features." : "Offline — everything still works."}</div>}
 
         {section === "plan" && (
           <>
             <SubTabs value={planSub} onChange={setPlanSub} tabs={[["week", "Week"], ["balance", "Balance"]]} />
-            {planSub === "week" && <WeekTab tasks={store.tasks} categories={store.categories} weeks={store.weeks} setWeeksP={store.setWeeksP} weekStart={weekStart} setWeekStart={setWeekStart} />}
-            {planSub === "balance" && <BalanceTab tasks={store.tasks} categories={store.categories} weeks={store.weeks} weekStart={weekStart} questions={store.questions} reflections={store.reflections} setReflectionsP={store.setReflectionsP} online={online} aiEnabled={aiEnabled} />}
+            {planSub === "week" && <WeekTab tasks={store.tasks} categories={store.categories} weeks={store.weeks} setWeeksP={store.setWeeksP} setTasksP={store.setTasksP} weekStart={weekStart} setWeekStart={setWeekStart} />}
+            {planSub === "balance" && <BalanceTab tasks={store.tasks} categories={store.categories} weeks={store.weeks} weekStart={weekStart} questions={store.questions} reflections={store.reflections} setReflectionsP={store.setReflectionsP} online={online} aiEnabled={aiEnabled} ai={ai} />}
           </>
         )}
 
         {section === "tasks" && (
           <>
             <SubTabs value={taskSub} onChange={setTaskSub} tabs={[["tasks", "Tasks"], ["guiding", "Questions"]]} />
-            {taskSub === "tasks" && <TasksTab tasks={store.tasks} categories={store.categories} setTasksP={store.setTasksP} setCategoriesP={store.setCategoriesP} setWeeksP={store.setWeeksP} />}
-            {taskSub === "guiding" && <GuidingTab questions={store.questions} setQuestionsP={store.setQuestionsP} reflections={store.reflections} setReflectionsP={store.setReflectionsP} online={online} aiEnabled={aiEnabled} />}
+            {taskSub === "tasks" && <TasksTab tasks={store.tasks} categories={store.categories} setTasksP={store.setTasksP} setCategoriesP={store.setCategoriesP} />}
+            {taskSub === "guiding" && <GuidingTab questions={store.questions} setQuestionsP={store.setQuestionsP} reflections={store.reflections} setReflectionsP={store.setReflectionsP} online={online} aiEnabled={aiEnabled} ai={ai} />}
           </>
         )}
 
-        {section === "settings" && <SettingsTab store={store} />}
+        {section === "vision" && <VisionTab vision={store.vision} setVisionP={store.setVisionP} tasks={store.tasks} categories={store.categories} />}
 
-        {section === "logout" && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-sm text-zinc-400">
-            You're not signed in yet — Tiempo accounts (and sign-out) arrive in the next phase. Everything works offline without an account.
-          </div>
-        )}
+        {section === "settings" && <SettingsTab store={store} />}
       </div>
     </div>
   );
