@@ -4,3 +4,14 @@
 
 html, body, #root { height: 100%; }
 body { margin: 0; background: #000; }
+
+/* The Android shell draws edge-to-edge behind the system bars, so anything that
+   sits at the very top or bottom of the screen pads itself back out with these. */
+@layer utilities {
+  .pt-safe { padding-top: calc(1.25rem + env(safe-area-inset-top, 0px)); }
+  .pb-safe { padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px)); }
+  .drawer-safe {
+    padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+}

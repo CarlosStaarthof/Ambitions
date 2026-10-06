@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Tiempo</string>
-    <string name="title_activity_main">Tiempo</string>
-    <string name="package_name">com.carlos.mytime</string>
-    <string name="custom_url_scheme">com.carlos.mytime</string>
+    <string name="app_name">Ambitions</string>
+    <string name="title_activity_main">Ambitions</string>
+    <string name="package_name">com.carlos.ambitions</string>
+    <string name="custom_url_scheme">com.carlos.ambitions</string>
 </resources>
