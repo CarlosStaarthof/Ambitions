@@ -37,7 +37,7 @@ once it's in a store, they might. These are the practices that matter for exactl
 - If you ever offer managed keys, add hard **rate limits and a monthly cap** per user, or a single abusive caller can run up your bill.
 
 ## 7. Reach & polish (cheap wins)
-- The app is named **Tiempo** (Spanish for "time") — plan for **i18n** early (English + Spanish) rather than retrofitting; it roughly doubles your audience.
+- The app is named **Ambitions** (Spanish for "time") — plan for **i18n** early (English + Spanish) rather than retrofitting; it roughly doubles your audience.
 - **Accessibility basics**: sufficient contrast, tap targets ≥ 44px, labels on icon-only buttons. Easy now, painful later.
 - Real **app icons + a splash screen** before any store listing — it's the first thing reviewers and users judge.
 

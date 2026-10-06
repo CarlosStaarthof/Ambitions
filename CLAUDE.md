@@ -1,12 +1,33 @@
 # CLAUDE.md
 
+> ## You are an orchestrator in this repository, not an editor.
+>
+> **Do not edit `src/`, `tests/`, or `android/` yourself.** Read `AGENTS.md`, then
+> delegate through the subagent harness:
+>
+> ```
+> spec-writer  →  (explorer ×2-3)  →  implementer  →  reviewer
+> ```
+>
+> Launch them with the `Agent` tool, one feature at a time, and require each to write
+> its output to a file under `progress/` and return only a one-line file reference.
+> State lives on disk, not in chat.
+>
+> You may read anything, run `./init.ps1`, and edit harness files (`AGENTS.md`,
+> `CHECKPOINTS.md`, `feature_list.json`, `specs/`, `docs/`, `progress/`) directly.
+>
+> **No feature reaches `done` without a reviewer `APPROVED` and a green `init`.**
+>
+> The one exception: if the user explicitly asks you to make a change directly, do it —
+> their instruction outranks this file.
+
 Guidance for AI agents (Claude Code and others) working in this repository. Keep this file current when architecture, conventions, or invariants change.
 
 Deeper context lives in [docs/](docs/): [ROADMAP-V2.md](docs/ROADMAP-V2.md) (multi-provider AI, no-AI mode, accounts, and the open decisions), [BEST-PRACTICES.md](docs/BEST-PRACTICES.md), [PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md), and [WORKING-WITH-CLAUDE-CODE.md](docs/WORKING-WITH-CLAUDE-CODE.md).
 
 ## What this is
 
-**Tiempo** — a local-first weekly time-planner and monthly reflection tool. The web app is a Vite + React + Tailwind SPA; it ships as an installable PWA and is wrapped for Android/iOS with Capacitor. All user data lives on the device (IndexedDB via localForage); the JSON export is the only backup. AI features call Claude through a serverless proxy and only work online.
+**Ambitions** — a local-first weekly time-planner and monthly reflection tool. The web app is a Vite + React + Tailwind SPA; it ships as an installable PWA and is wrapped for Android/iOS with Capacitor. All user data lives on the device (IndexedDB via localForage); the JSON export is the only backup. AI features call Claude through a serverless proxy and only work online.
 
 ## Product philosophy (don't break these assumptions)
 
@@ -28,7 +49,16 @@ npm run cap:sync   # build + npx cap sync (push web build into native projects)
 npm run android    # build + sync + open Android Studio
 ```
 
-There is **no test runner, linter, or type-checker configured.** Don't claim "tests pass" — there are none. Verify changes by running `npm run dev` (or `npm run build` to catch build errors).
+```bash
+npm test           # vitest run - unit tests for the pure helpers in src/lib/
+npm run test:watch # vitest in watch mode
+./init.ps1         # the gate: build + tests + one-feature check. Must print [OK].
+```
+
+There is **no linter and no type-checker.** `npm run build` is what catches a bad import
+or broken JSX; `npm test` (Vitest) covers `src/lib/`. Neither proves the UI is right —
+components are not unit-tested, so say plainly what still needs checking on the device
+rather than implying coverage.
 
 ## Architecture
 
@@ -39,7 +69,7 @@ There is **no test runner, linter, or type-checker configured.** Don't claim "te
 
 ### Data model & storage keys
 
-localForage instance `my-time` (legacy id — kept so V1 data survives the Tiempo rename; do not change it) / store `kv`, five keys:
+localForage instance `ambitions` (V1/V2 data is auto-migrated once from the legacy `my-time` instance on first load — see `storage.js`) / store `kv`, five keys:
 
 | key | shape |
 | --- | --- |
@@ -48,19 +78,20 @@ localForage instance `my-time` (legacy id — kept so V1 data survives the Tiemp
 | `questions` | `[{ id, text }]` |
 | `weeks` | `{ [isoMondayDate]: { cells: { "<dayIdx>-<slot>": taskId } } }` |
 | `reflections` | `{ [yyyy-mm]: { [questionId]: answerText, _ai?: aiText } }` |
-| `settings` | `{ ai: { enabled, provider, model } }` — app prefs; drives the "AI or no-AI" mode |
+| `settings` | `{ ai: { enabled, provider, model, keys } }` — app prefs; `keys` is a per-provider BYO-key map, never included in the JSON export |
 
 - Week keys are the ISO date of that week's Monday (`isoDate(mondayOf(d))`). Cell keys are `` `${dayIndex}-${slot}` `` where dayIndex 0–6 = Mon–Sun and slot 0–47 = 00:00–23:30.
 - `_ai` is a **reserved key** inside a month's reflections object — it stores Claude's generated response, not a user answer. Code that iterates answers must skip `_ai` (see how `answeredCount` filters by the real `questions` list).
-- The export envelope is `{ version: 4, exportedAt, tasks, categories, questions, weeks, reflections }`. `normalizeModel()` in `seed.js` migrates old shapes (incl. V1 `task.category`) forward on both load and import — extend it and bump `version` if you change any shape.
+- The export envelope is `{ version: 5, exportedAt, tasks, categories, questions, weeks, reflections, vision }`. `normalizeModel()` in `seed.js` migrates old shapes (incl. V1 `task.category`) forward on both load and import — extend it and bump `version` if you change any shape.
 
 ## AI integration (read before touching anything AI-related)
 
-- **The Anthropic API key NEVER lives in the client.** The browser calls a same-origin/configured proxy ([api/ai.js](api/ai.js)) that holds `ANTHROPIC_API_KEY` server-side and forwards to the Anthropic Messages API. Do not add the key to `.env`, the React app, or any committed file. `VITE_*` vars are bundled into client JS and are public by definition.
-- **Provider-agnostic dispatcher.** [src/lib/ai.js](src/lib/ai.js) exposes `callAI(content, settings.ai)`, which routes to a per-provider adapter based on `settings.ai.provider`; [src/lib/providers.js](src/lib/providers.js) is the catalog (Anthropic/OpenAI/Google + a `none` option). `enabled:false` or `provider:"none"` throws `ai-disabled` — that's the intended **no-AI mode**. Every adapter still goes through the proxy so no key touches the client. Only Anthropic is wired up today; OpenAI/Google adapters throw a clear "not connected yet" error.
-- **Backward-compatible entry point** is `callClaude(content)` (a thin wrapper over `callAI(..., { provider: "anthropic" })`), used by the existing tabs. It short-circuits with `throw new Error("offline")` when offline. AI buttons are disabled while `!online`. New code should call `callAI` with `settings.ai`.
+- **Ambitions never owns an API key, and runs no server.** This is **bring-your-own-key**: the user pastes *their own* provider key, it is stored on their device under `settings.ai.keys[provider]`, and [src/lib/ai.js](src/lib/ai.js) calls the vendor **directly from the WebView**. There is no proxy in the request path. Never add a project-owned key to `.env`, the React app, or any committed file — `VITE_*` vars are bundled into client JS and are public by definition. The distinction that matters: *the user's own key on their own device is by design; a key belonging to the project in the client is never acceptable.*
+- **Provider-agnostic dispatcher.** `callAI(content, settings.ai)` routes to a per-provider adapter keyed on `settings.ai.provider`; [src/lib/providers.js](src/lib/providers.js) is the catalog (Anthropic/OpenAI/Google + a `none` option). All three adapters are wired: Anthropic `/v1/messages` (with `anthropic-dangerous-direct-browser-access`), OpenAI `/v1/chat/completions`, Google `:generateContent`. Each returns a plain string, so callers never learn which vendor answered. `enabled:false` or `provider:"none"` throws `ai-disabled` — the intended **no-AI mode**, and the shipping default.
+- **Errors are sentinels, rendered via `aiErrorText(e)`** — `offline`, `no-key`, `ai-disabled`, plus friendly text mapped from HTTP status. AI UI only renders when enabled *and* a key exists for the selected provider (see `aiEnabled` in `App.jsx`), so buttons never appear in a state where they'd just fail.
+- **Model ids are not hardcoded truth.** `providers.js` `models` is a *fallback*; `fetchModels(provider, key)` asks the vendor for its live catalogue, and Settings also accepts a typed model id. Vendor catalogs move constantly — don't bake a list in. For current Claude ids, consult the `claude-api` skill rather than guessing.
+- **[api/ai.js](api/ai.js) is unused** and kept only as a starting point should managed keys ever be offered (roadmap D1 "Route A"). Nothing in the app calls it.
 - **Prompts live with the feature, not in a shared file.** The two personas are inline strings in [src/components/BalanceTab.jsx](src/components/BalanceTab.jsx) (`askCoach`) and [src/components/GuidingTab.jsx](src/components/GuidingTab.jsx) (`bounceGuiding`). They encode the basic-first / ambition-second philosophy — preserve that framing if you edit them.
-- **Model** is set once, server-side, in `api/ai.js` (`claude-sonnet-4-6`). Change it there only; the client never names a model. For current model ids and the API contract, consult the `claude-api` skill rather than guessing.
 
 ## Conventions
 
@@ -75,7 +106,7 @@ localForage instance `my-time` (legacy id — kept so V1 data survives the Tiemp
 
 - No analytics, no network calls except the AI proxy. "No data leaves the device" must stay true (it's the Play Store data-safety claim).
 - Keep secrets out of git: `.env`, `*.keystore`, `key.properties` are gitignored. The **Android keystore is the app's permanent signing identity** — never commit it, never regenerate it once published.
-- `appId` in `capacitor.config.json` (`com.carlos.mytime`) is permanent after publishing.
+- `appId` in `capacitor.config.json` (`com.carlos.ambitions`) is permanent after publishing.
 
 ## Native / release notes
 

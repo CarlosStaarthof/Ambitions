@@ -8,7 +8,7 @@ to grow *into*, ideally applied as **one dedicated, mechanical commit right befo
 
 ## Current
 ```
-Tiempo/
+Ambitions/
 ├─ api/ai.js                      # serverless proxy
 ├─ src/
 │  ├─ App.jsx  main.jsx  index.css
@@ -22,7 +22,7 @@ Tiempo/
 
 ## Target (feature-based, scales to V2)
 ```
-Tiempo/
+Ambitions/
 ├─ api/                           # keep this name — Vercel maps /api to functions
 │  └─ ai.js
 ├─ public/
@@ -41,7 +41,7 @@ Tiempo/
 │  │  ├─ ui/                      # ui.js tokens + shared primitives (Card, Button)
 │  │  ├─ lib/                     # time.js, io.js, useArmed.js (framework-agnostic)
 │  │  └─ store/                   # useStore.js, storage.js, seed.js
-│  ├─ i18n/                       # NEW: en/ es/ strings ("Tiempo" wants Spanish + English)
+│  ├─ i18n/                       # NEW: en/ es/ strings ("Ambitions" wants Spanish + English)
 │  └─ styles/                     # index.css
 ├─ scripts/                       # release helpers (version bump, apk build)
 ├─ docs/

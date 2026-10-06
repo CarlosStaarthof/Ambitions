@@ -1,0 +1,192 @@
+{
+  "project": "Ambitions",
+  "rule": "Exactly one feature may be 'in_progress' at a time. init.ps1 enforces it.",
+  "statuses": [
+    "pending",
+    "spec_ready",
+    "in_progress",
+    "in_review",
+    "done",
+    "blocked"
+  ],
+  "features": [
+    {
+      "id": 1,
+      "name": "encrypted-export",
+      "title": "Passphrase-encrypted JSON export",
+      "status": "pending",
+      "spec": "specs/features/001-encrypted-export.md",
+      "why": "The JSON export is the only backup, and it currently lands in Downloads as plaintext containing the full schedule and every reflection answer.",
+      "acceptance": []
+    },
+    {
+      "id": 2,
+      "name": "app-lock",
+      "title": "Biometric / PIN lock on launch",
+      "status": "pending",
+      "spec": "specs/features/002-app-lock.md",
+      "why": "Encryption at rest does not protect an unlocked phone. This is the only layer that does. (Security ladder L3.)",
+      "acceptance": []
+    },
+    {
+      "id": 3,
+      "name": "reminders-infrastructure",
+      "title": "Local notification infrastructure + monthly reflection reminder",
+      "status": "done",
+      "spec": "specs/features/003-reminders-infrastructure.md",
+      "why": "No notification capability exists at all - no plugin, no POST_NOTIFICATIONS. Built once here and reused by the monthly reflection reminder and by the Vision Board windows (feature 6), which depends on it.",
+      "acceptance": [
+        "AC-1: `@capacitor/local-notifications` is listed in `dependencies` in `package.json` at a version range matching the installed Capacitor 6 line, and `./init.ps1` prints `[OK]` (build plus tests green) after installation.",
+        "AC-2: `android/app/src/main/AndroidManifest.xml` declares `android.permission.POST_NOTIFICATIONS`, and no other new permission is added to that file except a `tools:node=\"remove\"` entry.",
+        "AC-3: After a debug build, the merged manifest under `android/app/build/intermediates/merged_manifests/` contains neither `android.permission.SCHEDULE_EXACT_ALARM` nor `android.permission.USE_EXACT_ALARM` \u2014 if the library contributes either, it is stripped with `tools:node=\"remove\"` in the app manifest.",
+        "AC-4: No new `.java` file is added under `android/app/src/main/java/com/carlos/ambitions/`, and `MainActivity.java` is unchanged \u2014 the library supplies the receivers, the app registers none of its own.",
+        "AC-5: Nothing in this feature reaches the device until `npm run cap:sync` is run and the Android app is rebuilt and reinstalled; a web-only `npm run build` leaves the installed APK without `POST_NOTIFICATIONS` and without the notification channel.",
+        "AC-6: `reflectionOccurrences` with `from = 2026-09-16` returns a first occurrence of 2026-09-27 at 19:00 local \u2014 the first day of that month's last-4-day review window.",
+        "AC-7: The review-window anchor tracks month length: the occurrence for February 2027 is 2027-02-25 and for the leap February 2028 is 2028-02-26, both at 19:00 local.",
+        "AC-8: `plannedReminders(sources, settings, from, 6, ctx)` returns exactly 6 entries per enabled source, strictly ascending in time, every one strictly after `from`, and zero entries for a source whose `settings.reminders[id].enabled` is false or absent.",
+        "AC-9: A month whose reflections already contain a non-empty trimmed answer for every question in `questions` produces no occurrence; the returned list still has the requested count, extending into later months to make it up. The reserved `_ai` key is never counted as an answer.",
+        "AC-10: Every occurrence has local hour 19 and local minute 0 for all 24 consecutive months following any supplied `from`, including months containing a daylight-saving transition.",
+        "AC-11: `notificationIdFor` is deterministic \u2014 the same `sourceId` and the same calendar day always return the same integer, across separate calls and separate runs.",
+        "AC-12: Across all registered sources over a 24-month horizon, every generated notification id is unique and is an integer in the range 1 to 2147483647 inclusive.",
+        "AC-13: `diffSchedule` is idempotent \u2014 given a pending list that already equals the plan, both `toCancel` and `toSchedule` are empty.",
+        "AC-14: `diffSchedule` returns in `toCancel` every pending id absent from the plan, so disabling a source and re-planning yields a diff that cancels exactly that source's occurrences and schedules nothing.",
+        "AC-15: A synthetic source descriptor passed in the `sources` argument of `plannedReminders` is planned with no change to `plannedReminders` itself \u2014 registering a new recurring reminder requires only a descriptor plus a default entry in `DEFAULT_SETTINGS.reminders`.",
+        "AC-16: A `settings` object stored before this feature (no `reminders` key) loads with `reminders.reflection.enabled === false`; a stored object that has `reminders.reflection` but not a source added later loads with both present and the stored value preserved; running the load merge twice changes nothing.",
+        "AC-17: The export envelope is unchanged \u2014 still `version: 5`, still with no `settings` or `reminders` field \u2014 and a `version: 4` export still imports without error.",
+        "AC-18: No new localForage key is created; the set of keys read and written by `useStore` is exactly the seven that existed before.",
+        "AC-19: On a fresh install, no notification permission dialog appears at first launch or on any screen other than as the direct result of switching a reminder on in Settings. (Device.)",
+        "AC-20: Denying the permission leaves the toggle off, shows one line pointing at the system app settings, shows no second dialog on that tap, and leaves every other tab fully usable; relaunching the app does not re-prompt. (Device.)",
+        "AC-21: With permission denied, unsupported, or running in a desktop browser, `syncReminders` returns `{ scheduled: 0, cancelled: 0 }` and throws nothing, and the Settings section renders with disabled toggles and one line explaining reminders need the Android app.",
+        "AC-22: The Settings copy states that delivery is best-effort and may be delayed or dropped by battery optimisation, and names the One UI path to mark the app unrestricted. No copy anywhere promises or implies guaranteed delivery.",
+        "AC-23: With notifications never delivered \u2014 permission denied for the whole session \u2014 every other feature behaves identically; no stored state, window, or computed value anywhere in the app is produced by a notification firing.",
+        "AC-24: On device, switching the reflection reminder on and then inspecting pending notifications shows 6 entries at the expected dates; switching it off leaves zero pending entries for that source. (Device.)",
+        "AC-25: On device, a reminder scheduled a few minutes ahead arrives with the app backgrounded and the screen off, with no `SecurityException` and without the system ever asking for the \"Alarms & reminders\" special access. (Device.)",
+        "AC-26: On device, Android's notification settings for the app list a single channel named \"Reminders\". (Device.)",
+        "AC-27: On device, after a reboot with a reminder enabled, opening the app leaves the pending set equal to the freshly derived plan for the current date \u2014 past occurrences gone, the next 6 present. (Device.)",
+        "AC-28: On device, tapping a delivered reminder opens the app without crashing; it is not required to land on any particular section."
+      ],
+      "review": "progress/review_reminders-infrastructure.md"
+    },
+    {
+      "id": 4,
+      "name": "release-signing",
+      "title": "Release signing config and bundleRelease script",
+      "status": "pending",
+      "spec": "specs/features/004-release-signing.md",
+      "why": "android/app/build.gradle has a release block with no signingConfig, so release builds are unsigned and cannot be uploaded to Play.",
+      "acceptance": []
+    },
+    {
+      "id": 5,
+      "name": "store-encryption",
+      "title": "Encrypt the localForage store at rest",
+      "status": "pending",
+      "spec": "specs/features/005-store-encryption.md",
+      "why": "Security ladder L2. Lower priority than L3 now that backup extraction (L0) is closed and keys are in the Keystore (L1).",
+      "acceptance": []
+    },
+    {
+      "id": 6,
+      "name": "vision-board-windows",
+      "title": "Calendar-gated Vision Board",
+      "status": "pending",
+      "spec": "specs/features/006-vision-board-windows.md",
+      "depends_on": [
+        3
+      ],
+      "why": "The board becomes a commitment device: add only 1-15 January, tick and delete only in the last 4 days of a month, read-only otherwise. Also drops the Ambition-task link and needs a migration for boards already on disk. Rules in specs/domain-model.md section 'Vision Board windows'.",
+      "acceptance": []
+    },
+    {
+      "id": 7,
+      "name": "week-integrity-fix",
+      "title": "Stop past-week data loss",
+      "status": "done",
+      "spec": "specs/features/007-week-integrity-fix.md",
+      "priority": "urgent",
+      "why": "LIVE DATA LOSS, two confirmed paths. (1) TasksTab.jsx:120 deleteTask has no useArmed guard and calls clearTaskIdsFromWeeks, which sweeps EVERY week (TasksTab.jsx:52-55) - one tap erases that task from all history, unrecoverably. Note deleteCategory at :96 DOES use arm(). (2) useStore.js:63 re-seeds SEED_TASKS whenever loadKey('tasks') returns empty, overwriting the real task list and orphaning every uid()-keyed cell; weeks survive on disk so positions are recoverable but names are not. Also: an orphan cell renders pixel-identical to an empty one (WeekTab.jsx:116-136), and weekStatsOf counts it in filled/freeH but in neither ambitionH nor committedH, so the three cards stop summing to 168h. Evidence: progress/explore_vanishing_cells.md",
+      "acceptance": [
+        "AC-1: For any `weekCells`, `tasks` and `categories`, `weekStatsOf` returns `ambitionH + committedH + freeH === 168` exactly \u2014 proven for an empty week, a week whose every cell resolves to a task, a week mixing resolvable and unresolvable ids, and a week whose 336 cells all hold unresolvable ids.",
+        "AC-2: `weekStatsOf` puts the hours of cells whose id matches no task into `committedH` and never into `ambitionH`, and reports them separately as `unknownH` equal to 0.5 x the number of such cells; `unknownH` is 0 when every cell resolves.",
+        "AC-3: An unresolvable cell still consumes Free \u2014 `weekStatsOf` with one such cell in an otherwise empty week reports `freeH` 167.5, which the cards display as `167:30`.",
+        "AC-4: A task carrying `retired: true` is counted exactly like an active one \u2014 a retired task in the `ambition` category holding two cells contributes 1 hour to `ambitionH`, contributes nothing to `unknownH`, and still appears in `byCategory.ambition`.",
+        "AC-5: `weekStatsOf` counts each cell once even when `tasks` contains two entries with the same id \u2014 one cell holding that id yields `ambitionH` 0.5, not 1, and the AC-1 sum still holds.",
+        "AC-6: `resolveCell` returns `{ kind: \"empty\" }` for an absent cell id, `{ kind: \"task\", name, color, code }` for an id present in the index including a retired task, and `{ kind: \"unknown\", name: \"Unknown task\", color: \"#52525b\", code: \"?\" }` for an id that is in no task.",
+        "AC-7: On the Week grid a cell whose id matches no task paints solid `#52525b`, shows `?` on the first cell of the run, and its title reads `Unknown task \u00b7 HH:MM`; an empty cell in the same row stays unpainted with only the time in its title. Checked at 390px wide. (Device.)",
+        "AC-8: The today, current-row and current-slot tints paint only on cells `resolveCell` calls `empty` \u2014 on the current week an unknown cell inside today's column still reads `#52525b`. (Device.)",
+        "AC-9: An unknown cell is repairable in place: selecting a task and tapping the cell replaces it with that task, and the eraser clears it. No new tool is required. (Device.)",
+        "AC-10: Balance's \"Hours by task\" chart shows one aggregate bar named `Unknown` coloured `#52525b` whenever the shown week's `unknownH` is above 0, and no such bar when it is 0. (Device.)",
+        "AC-11: `retireTask(tasks, id, at)` returns a new array of the same length in which that task has `retired: true` and `retiredAt` equal to the supplied `at` string stored verbatim, and every other element is deep-equal to its input; neither the input array nor any input object is mutated.",
+        "AC-12: `retireCategory(tasks, categories, categoryId, at)` marks that category `retired: true` and marks every task whose `categoryId` matches `retired: true` with the same `retiredAt`, removes no element from either array, and leaves tasks in other categories deep-equal to their input.",
+        "AC-13: `src/components/TasksTab.jsx` contains no reference to `setWeeksP` and no reference to the `weeks` key, and `src/App.jsx` passes no `setWeeksP` prop to `TasksTab` \u2014 there is no path from the Tasks tab to `weeks` at all.",
+        "AC-14: Regression: given a stored week from a past Monday holding 8 cells of task X, removing X in the Tasks tab leaves that week's cell map unchanged, the week still shows the 8 blocks with X's own name and colour, and its Ambition / Committed / Free read exactly as they did before the removal. (Device.)",
+        "AC-15: Blocks of a removed task in the current and future weeks are also left in place and keep the task's name and colour; they can be erased or painted over, and the removed task is no longer offered by the brush picker. (Device.)",
+        "AC-16: `activeTasks` excludes every task with `retired: true` and `activeCategories` excludes every category with `retired: true`, preserving order otherwise; consequently a removed task appears in none of the Tasks tab list, the Week brush picker, the Week category chip count, or Balance's \"Ambition plans this week\". (Pure for the two helpers; Device for the four surfaces.)",
+        "AC-17: The per-task trash control is a two-tap `useArmed` action with the same 4-second arming window as the category control above it \u2014 the first tap only changes the control's appearance, the second removes the task \u2014 and no `window.confirm` is introduced anywhere. (Device for the arming behaviour.)",
+        "AC-18: The Tasks tab states the new semantics: the armed trash control's `title` and `aria-label` read `Tap again to remove \u2014 past weeks keep it`, the armed category control's label does not claim that weeks are cleared, and the tab's footer copy contains one sentence saying that weeks already filled keep a removed task.",
+        "AC-19: A newly added task never takes the colour of a retired task \u2014 `nextColor` is still passed every colour in `tasks`, retired ones included.",
+        "AC-20: `retiredTasks(tasks)` returns exactly the tasks carrying `retired: true`, ordered by `retiredAt` with the most recently retired first, and places any retired task lacking `retiredAt` last in its original relative order.",
+        "AC-21: `restoreTask(tasks, categories, id)` returns the task with the `retired` and `retiredAt` keys **removed** \u2014 not set to `false` or `null` \u2014 so its stored shape is identical to what it was before the delete, including `name`, `color`, `target` and `weekKey`; every other task is deep-equal to its input and no input array or object is mutated.",
+        "AC-22: `restoreTask` also clears `retired` on the restored task's own category when that category is retired, so a task restored out of a removed category becomes visible again instead of returning into a hidden one; every other retired category stays retired.",
+        "AC-23: `restoreTask` is idempotent \u2014 calling it for an id that is not retired, or calling it a second time on its own output, returns arrays deep-equal to the first result and changes nothing else.",
+        "AC-24: `restoreTask` with an id present in neither array returns arrays deep-equal to its input and throws nothing.",
+        "AC-25: The Tasks tab renders a \"Retired\" section listing every retired task with its name, its colour and the category it would return to, collapsed by default, with one restore control per row; the section is not rendered at all when nothing is retired. (Device.)",
+        "AC-26: Recovering an accidental delete takes two taps \u2014 one to open the Retired section, one on that task's restore control. Restore is not armed, because it destroys nothing. (Device.)",
+        "AC-27: After a restore the task is back in its own category in the Tasks tab, in the Week brush picker and in that category's chip count, with its original name, colour, target and week scoping; if its category had been removed with it, that category is visible again too. (Device; the stored shape is AC-21 and AC-22.)",
+        "AC-28: Across a full delete-then-restore cycle no week's cell map changes at any point, and a past week that held the task renders identically before the delete, while it is retired, and after the restore. (Device; structurally guaranteed by AC-13.)",
+        "AC-29: `loadKey` resolves to `{ ok: true, value }` when the store read succeeds, with `value: null` for a key that is simply absent, and to `{ ok: false, value: null }` when the read throws.",
+        "AC-30: `loadDecision` returns `{ seed: true, storageError: false }` only when all seven reads report `ok: true` and every value is empty \u2014 `null`, `undefined`, `[]`, `{}` or `\"\"`.",
+        "AC-31: `loadDecision` returns `seed: false` when all seven reads succeeded but any one value has content \u2014 in particular for `tasks` empty or null together with a non-empty `weeks`, which is the shape of the reported incident.",
+        "AC-32: `loadDecision` returns `{ seed: false, storageError: true }` when any read reports `ok: false`, even when every value read back empty.",
+        "AC-33: `useStore` seeds `SEED_TASKS`, `SEED_CATEGORIES` and `SEED_QUESTIONS` only when `loadDecision(reads).seed` is true \u2014 there is exactly one seeding branch, gated on that single boolean, and the old `!t || !t.length` and `!q || !q.length` tests are gone.",
+        "AC-34: An existing install whose stored `tasks` is empty while other keys have content launches with an empty task list, no seed task on any category, and a stored `tasks` that is still empty afterwards. (Device.)",
+        "AC-35: When `storageError` is true the app writes nothing and edits nothing \u2014 `App` renders only the failure message with no tab content and no reachable setter, no `saveKey` runs on the load path, and the reminder reconciliation is skipped; the message says the saved data could not be read, that nothing has been changed, and to close and reopen the app. (Device for the rendered screen.)",
+        "AC-36: No code path that runs during load writes the `weeks` key \u2014 `saveKey(\"weeks\", \u2026)` appears only inside `setWeeksP`.",
+        "AC-37: The set of localForage keys `useStore` reads and writes is still exactly `categories`, `questions`, `reflections`, `settings`, `tasks`, `vision`, `weeks`, and the existing assertion proving it in `tests/unit/reminders.test.js` passes unmodified.",
+        "AC-38: `src/lib/tasks.js` is pure \u2014 it imports nothing but `./time`, and contains no React, no DOM access and no storage access.",
+        "AC-39: `tasks` and `categories` arrays written before this feature, with no `retired` key anywhere, load with every task and category active, and no load-time pass adds, rewrites or backfills the field.",
+        "AC-40: `normalizeModel` preserves `retired` and `retiredAt` on tasks and `retired` on categories, and running it twice over data containing retired entries returns a deep-equal result.",
+        "AC-41: `normalizeModel` does not re-home a task whose category exists but is retired \u2014 the task keeps its `categoryId` and no `Basic` category is created.",
+        "AC-42: `normalizeModel` returns the `ambition` and `open` categories active: a stored `categories` carrying `retired: true` on either has that flag cleared, with Ambition still first and Open still last.",
+        "AC-43: The export envelope stays `version: 5` with the same field list; a file exported after this feature carries `retired` and `retiredAt` inside `tasks`, re-importing it restores those tasks as retired and still listed under Retired, and both a `version: 4` file and a pre-feature `version: 5` file still import with every task and category active.",
+        "AC-44: With AI off \u2014 `enabled: false` or `provider: \"none\"`, the shipping default \u2014 every behaviour above is identical and no AI surface appears anywhere; this feature adds no AI call, no prompt and no AI-gated control.",
+        "AC-45: No file under `android/` changes, and nothing here reaches the device until `npm run cap:sync` is run and the Android app is rebuilt and reinstalled; a web-only `npm run build` leaves the installed APK on the old, data-losing behaviour. (Device.)"
+      ],
+      "review": "progress/review_week-integrity-fix.md"
+    },
+    {
+      "id": 8,
+      "name": "week-approval",
+      "title": "Approve a week: lock it and snapshot what it held",
+      "status": "pending",
+      "spec": "specs/features/008-week-approval.md",
+      "depends_on": [
+        3,
+        7
+      ],
+      "why": "Monday sticky notification until last week is approved, dismissible after 24h. Approval is PERMANENT (no undo). Unapproved past weeks stay editable but are visibly flagged. Locked weeks must store a snapshot that takes PRECEDENCE over the live task, not a fallback - otherwise renaming or recolouring a task retroactively rewrites history (TasksTab.jsx:43). Snapshot needs name+color per cell AND categoryId+protected, or the Ambition/Committed cards go wrong. No weeks migration needed: absent 'approved' means not approved. Constraints: tests pin useStore to exactly 7 localForage keys and the export to version 5, so the snapshot must live inside the weeks value. 'clear this week' (WeekTab.jsx:177) replaces the whole week object and would destroy sibling fields. Evidence: progress/explore_week_snapshot.md",
+      "acceptance": []
+    },
+    {
+      "id": 9,
+      "name": "open-task-reaper",
+      "title": "Retire unused Open tasks after 14 days",
+      "status": "pending",
+      "spec": "specs/features/009-open-task-reaper.md",
+      "depends_on": [
+        8
+      ],
+      "why": "Drop an Open task from the Tasks list after 14 days unused while it keeps rendering in the calendar. HARD DEPENDENCY on feature 8: without snapshots this creates the exact orphan bug feature 7 fixes, in every week the task was painted.",
+      "acceptance": []
+    },
+    {
+      "id": 10,
+      "name": "week-balance-ui",
+      "title": "Full task names in cells; AI last in Balance",
+      "status": "pending",
+      "spec": "specs/features/010-week-balance-ui.md",
+      "why": "Two small UI changes the user asked for. (1) Calendar blocks show the full task name truncated to fit, replacing the 3-letter codeFor() label. (2) Balance section order becomes stat cards, Ambition plans, Hours by task, Guiding questions, then the AI card last.",
+      "acceptance": []
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-# Working with me efficiently on Tiempo
+# Working with me efficiently on Ambitions
 
 A short brief on the Claude Code skills/features worth using for this project, and —
 more importantly — **how to hand me your change list so I move fast and get it right.**

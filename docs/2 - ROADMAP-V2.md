@@ -1,4 +1,4 @@
-# Tiempo — V2 Roadmap & Architecture
+# Ambitions — V2 Roadmap & Architecture
 
 This turns your "core thinking" into an architecture and a sequence. It also isolates
 the handful of **decisions only you can make** — I've recommended one for each so you can
@@ -6,11 +6,11 @@ just confirm or override.
 
 ## The vision, restated
 
-Tiempo is a **personal-first** app you also want **publicly available**. It should:
+Ambitions is a **personal-first** app you also want **publicly available**. It should:
 - Work **with AI or completely without it** — AI is an enhancement, never a requirement.
 - Support **any major AI provider** (Anthropic, OpenAI, Google to start), chosen by the user.
-- Let the user **bring their own provider account** — Tiempo talks to the AI *on the user's behalf*, using the user's access, not a key Tiempo pays for.
-- Offer a **Tiempo account** (log in) as the identity layer, with model selection after login.
+- Let the user **bring their own provider account** — Ambitions talks to the AI *on the user's behalf*, using the user's access, not a key Ambitions pays for.
+- Offer a **Ambitions account** (log in) as the identity layer, with model selection after login.
 
 ## What already exists after this session (the foundation)
 
@@ -24,12 +24,12 @@ Nothing user-visible changed yet — the UI wiring waits on the decisions below 
 
 ### D1 — Where do provider API keys live?
 Because the user brings their own account, *their* key/token has to reach the vendor somehow.
-- **(Recommended) BYO-key through a thin, stateless proxy.** The user pastes their provider key once; it's stored **only on their device** (encrypted at rest), and sent per-request to a Tiempo proxy that *forwards* it to the vendor and returns the reply — **never logging or storing it**. This solves browser CORS (vendors block direct browser calls) without Tiempo ever owning the key.
+- **(Recommended) BYO-key through a thin, stateless proxy.** The user pastes their provider key once; it's stored **only on their device** (encrypted at rest), and sent per-request to a Ambitions proxy that *forwards* it to the vendor and returns the reply — **never logging or storing it**. This solves browser CORS (vendors block direct browser calls) without Ambitions ever owning the key.
 - Direct browser → vendor: no server, but CORS-blocked by Anthropic/OpenAI and leaks the key in network tools.
-- Tiempo-hosted managed keys: simplest UX, but **you pay every user's AI bill** — contradicts "user brings their own account."
+- Ambitions-hosted managed keys: simplest UX, but **you pay every user's AI bill** — contradicts "user brings their own account."
 
-### D2 — What is the "Tiempo account" actually for, and when?
-- **(Recommended) Make it optional, and add it in Phase 2.** Ship V2 local-first with **no login required**; the app works fully offline and privately. Introduce an *optional* Tiempo account later purely for **cross-device sync + cloud backup**. This preserves today's "nothing leaves the device" privacy promise as the default.
+### D2 — What is the "Ambitions account" actually for, and when?
+- **(Recommended) Make it optional, and add it in Phase 2.** Ship V2 local-first with **no login required**; the app works fully offline and privately. Introduce an *optional* Ambitions account later purely for **cross-device sync + cloud backup**. This preserves today's "nothing leaves the device" privacy promise as the default.
 - Required-account-from-day-one is possible but forces a backend (auth + database + privacy policy for stored personal data) before you can ship, and breaks offline-first.
 
 ### D3 — If/when you add accounts, who runs auth?
@@ -42,7 +42,7 @@ Because the user brings their own account, *their* key/token has to reach the ve
 
 - **P0 — Harden V1.** Apply your page-by-page fix list. Add real app icons. Deploy the proxy so AI works on the phone. Tag `v1.0.0`.
 - **P1 — "Any model, or none."** Settings UI: an AI on/off switch + provider/model picker (reads `providers.js`), BYO-key entry stored on-device, proxy upgraded to route by provider and forward the user's key (D1). AI buttons hide/disable in no-AI mode.
-- **P2 — Optional Tiempo account (D2/D3).** Managed auth; optional cloud sync/backup of the same JSON the export produces. Local-first stays the default.
+- **P2 — Optional Ambitions account (D2/D3).** Managed auth; optional cloud sync/backup of the same JSON the export produces. Local-first stays the default.
 - **P3 — Store submission.** Play Store first (Android, no Mac needed): signed AAB, data-safety form, privacy policy URL. App Store later (needs a Mac + Xcode + Apple Developer Program).
 - **P4 — Update pipeline.** GitHub Actions builds web/PWA + Android on every tagged release; optionally fastlane to push builds to the stores. Web/PWA updates are instant; native store updates always wait on review.
 
