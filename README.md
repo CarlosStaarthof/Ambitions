@@ -1,3 +1,5 @@
+Yay, we made it work x3
+
 # Ambitions
 
 A local-first weekly time-planner and monthly reflection tool. Web + installable PWA + Android/iOS via Capacitor. All data lives on-device; the JSON export is the backup. AI features call Claude through a serverless proxy and only work online.
