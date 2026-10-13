@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  normalizeModel, backfillOpenWeeks, loadDecision, AMBITION_ID, OPEN_ID,
+  normalizeModel, backfillOpenWeeks, mergeImportedWeeks, loadDecision, AMBITION_ID, OPEN_ID,
   SEED_TASKS, SEED_CATEGORIES, DAYS, SLOTS, CELLS
 } from "../../src/lib/seed.js";
 import { activeTasks, activeCategories, retiredTasks } from "../../src/lib/tasks.js";
@@ -257,5 +257,57 @@ describe("loadDecision", () => {
     expect(loadDecision({})).toEqual({ seed: false, storageError: true });
     expect(loadDecision(null)).toEqual({ seed: false, storageError: true });
     expect(loadDecision(reads({ vision: undefined }))).toEqual({ seed: false, storageError: true });
+  });
+});
+
+describe("merging imported weeks", () => {
+  const A = { cells: { "0-0": "t1" } };
+  const B = { cells: { "1-1": "t2" } };
+  const C = { cells: { "2-2": "t3" } };
+
+  // AC-1
+  it("keeps every stored week, lets the file win a shared week, and mutates nothing", () => {
+    const stored = { "2026-08-24": A, "2026-08-31": B };
+    const imported = { "2026-08-24": { cells: { "0-0": "t9" } }, "2026-09-07": C };
+    const out = mergeImportedWeeks(stored, imported);
+    expect(Object.keys(out).sort()).toEqual(["2026-08-24", "2026-08-31", "2026-09-07"]);
+    expect(out["2026-08-24"]).toEqual(imported["2026-08-24"]); // the file is the user's chosen truth
+    expect(out["2026-08-31"]).toEqual(B);                      // a week the file omits survives
+    expect(out["2026-09-07"]).toEqual(C);
+    expect(out).not.toBe(stored);
+    expect(out).not.toBe(imported);
+    // neither input is mutated
+    expect(stored).toEqual({ "2026-08-24": A, "2026-08-31": B });
+    expect(imported).toEqual({ "2026-08-24": { cells: { "0-0": "t9" } }, "2026-09-07": C });
+  });
+
+  // AC-2
+  it("removes nothing when the imported file has no weeks", () => {
+    const stored = { "2026-08-24": A, "2026-08-31": B };
+    expect(mergeImportedWeeks(stored, {})).toEqual(stored);
+    expect(mergeImportedWeeks(stored, undefined)).toEqual(stored);
+  });
+
+  // AC-3
+  it("adopts every week of the file when the store is empty", () => {
+    const imported = { "2026-09-07": C };
+    expect(mergeImportedWeeks({}, imported)).toEqual(imported);
+  });
+
+  // AC-4
+  it("is idempotent", () => {
+    const stored = { "2026-08-24": A, "2026-08-31": B };
+    const imported = { "2026-08-24": { cells: { "0-0": "t9" } }, "2026-09-07": C };
+    const once = mergeImportedWeeks(stored, imported);
+    expect(mergeImportedWeeks(once, imported)).toEqual(once);
+    expect(mergeImportedWeeks(stored, stored)).toEqual(stored);
+  });
+
+  // AC-5
+  it("survives being handed nothing at all", () => {
+    expect(mergeImportedWeeks(undefined, undefined)).toEqual({});
+    expect(mergeImportedWeeks(null, null)).toEqual({});
+    expect(() => mergeImportedWeeks("nope", 7)).not.toThrow();
+    expect(mergeImportedWeeks("nope", 7)).toEqual({});
   });
 });

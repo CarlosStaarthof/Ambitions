@@ -140,6 +140,18 @@ export function backfillOpenWeeks(tasks, weeks, fallbackWeekKey) {
   return { tasks: next, changed: true };
 }
 
+// Import is the one writer of `weeks` that can reach every week at once. Replacing the
+// whole key with the file's would mean that restoring any export taken before some weeks
+// were painted permanently deletes those newer weeks — and `weeks` is the one key with no
+// migration, no undo and no way to rebuild a cell. So merge: the file is the user's chosen
+// truth for every week it contains, and a week it simply does not mention is left exactly
+// as it is. This is deliberately unlike `tasks` and the other keys, which import still
+// replaces — only cells are irrecoverable at this granularity.
+export function mergeImportedWeeks(storedWeeks, importedWeeks) {
+  const asMap = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
+  return { ...asMap(storedWeeks), ...asMap(importedWeeks) };
+}
+
 // Bring a stored `settings` object up to the current shape. Sibling of
 // normalizeModel: a settings key added by a later feature has to appear for people
 // who already have settings on disk, and a per-source group (`ai`, `reminders`) has

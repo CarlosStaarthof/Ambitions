@@ -211,6 +211,26 @@ describe("resolving a cell", () => {
   });
 });
 
+// issue-3 AC-8. A retirement is a change to `tasks` alone: it must be impossible for it
+// to reach a `weeks` map, and the cells it leaves behind must still name the task.
+describe("retirement cannot touch history", () => {
+  const at = "2026-09-29T12:00:00.000Z";
+
+  it("leaves a supplied weeks map deep-equal", () => {
+    const weeks = { "2026-09-07": { cells: { "0-36": "w1", "0-37": "w1", "2-20": "a1" } } };
+    const before = clone(weeks);
+    retireTask(TASKS, "w1", at);
+    retireCategory(TASKS, CATS, "work", at);
+    expect(weeks).toEqual(before);
+  });
+
+  it("keeps every cell of a retired task resolving with the task's own name and colour", () => {
+    const after = retireTask(TASKS, "w1", at);
+    const cell = resolveCell("w1", taskIndex(after));
+    expect(cell).toEqual({ kind: "task", name: "Work 1", color: "#0ea5e9", code: "W1" });
+  });
+});
+
 // The pattern tests/unit/reminders.test.js § "what this feature did not change" uses.
 // These are the structural guarantees: the value of this feature is as much in what the
 // code can no longer do as in what it does.
@@ -247,6 +267,25 @@ describe("structural guarantees (source-read)", () => {
     for (const f of ["WeekTab", "TasksTab", "BalanceTab", "DataTab"]) {
       expect(read(`../../src/components/${f}.jsx`)).not.toMatch(/saveKey/);
     }
+  });
+
+  // issue-3 AC-6, AC-7, AC-11, AC-12. Import is the one writer of `weeks` that used to
+  // reach every week; it must merge, not replace, and no week-key lookup module is added.
+  it("merges imported weeks instead of replacing them, and adds no week-key lookup", () => {
+    const data = read("../../src/components/DataTab.jsx");
+    expect(data).toMatch(/mergeImportedWeeks\(weeks, pendingImport\.weeks\)/);
+    expect(data).not.toMatch(/setWeeksP\(pendingImport\.weeks\)/);
+    expect(data).toMatch(/mergeImportedWeeks/);
+    // AC-7 — the confirm copy names the merge
+    expect(data).toMatch(/[Ww]eeks the file does not contain are kept/);
+    // AC-11 — no week-key lookup module, and the key still comes from the Monday date
+    for (const p of ["../../src/components/DataTab.jsx", "../../src/components/WeekTab.jsx", "../../src/components/BalanceTab.jsx", "../../src/lib/seed.js"]) {
+      expect(read(p)).not.toMatch(/lookupWeek|weekKeyFor|resolveWeekKey|weekForDate/);
+    }
+    expect(read("../../src/components/WeekTab.jsx")).toMatch(/const weekKey = isoDate\(weekStart\)/);
+    // AC-12 — envelope untouched
+    const payload = data.split("\n").find((l) => l.includes("const payload ="));
+    expect(payload).toMatch(/version:\s*5\b/);
   });
 
   // AC-33
