@@ -269,15 +269,21 @@ describe("structural guarantees (source-read)", () => {
     }
   });
 
-  // issue-3 AC-6, AC-7, AC-11, AC-12. Import is the one writer of `weeks` that used to
-  // reach every week; it must merge, not replace, and no week-key lookup module is added.
-  it("merges imported weeks instead of replacing them, and adds no week-key lookup", () => {
+  // issue-3 AC-6, AC-7, AC-11, AC-12, AC-15. Import is the writer that used to reach every
+  // week and the whole task list; it must merge all three, not replace, and no week-key lookup
+  // module is added.
+  it("merges imported weeks, tasks and categories instead of replacing them, and adds no week-key lookup", () => {
     const data = read("../../src/components/DataTab.jsx");
     expect(data).toMatch(/mergeImportedWeeks\(weeks, pendingImport\.weeks\)/);
     expect(data).not.toMatch(/setWeeksP\(pendingImport\.weeks\)/);
     expect(data).toMatch(/mergeImportedWeeks/);
+    // AC-15 — the task list is protected the same way
+    expect(data).toMatch(/mergeImportedTasks\(tasks, pendingImport\.tasks\)/);
+    expect(data).toMatch(/mergeImportedCategories\(categories, pendingImport\.categories\)/);
+    expect(data).not.toMatch(/setTasksP\(pendingImport\.tasks\)/);
+    expect(data).not.toMatch(/setCategoriesP\(pendingImport\.categories\)/);
     // AC-7 — the confirm copy names the merge
-    expect(data).toMatch(/[Ww]eeks the file does not contain are kept/);
+    expect(data).toMatch(/[Ww]eeks, tasks and categories the file does not contain are kept/);
     // AC-11 — no week-key lookup module, and the key still comes from the Monday date
     for (const p of ["../../src/components/DataTab.jsx", "../../src/components/WeekTab.jsx", "../../src/components/BalanceTab.jsx", "../../src/lib/seed.js"]) {
       expect(read(p)).not.toMatch(/lookupWeek|weekKeyFor|resolveWeekKey|weekForDate/);

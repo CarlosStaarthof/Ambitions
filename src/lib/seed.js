@@ -143,13 +143,45 @@ export function backfillOpenWeeks(tasks, weeks, fallbackWeekKey) {
 // Import is the one writer of `weeks` that can reach every week at once. Replacing the
 // whole key with the file's would mean that restoring any export taken before some weeks
 // were painted permanently deletes those newer weeks — and `weeks` is the one key with no
-// migration, no undo and no way to rebuild a cell. So merge: the file is the user's chosen
-// truth for every week it contains, and a week it simply does not mention is left exactly
-// as it is. This is deliberately unlike `tasks` and the other keys, which import still
-// replaces — only cells are irrecoverable at this granularity.
+// migration, no undo and no way to rebuild a cell. So merge, at cell depth: a week the file
+// does not mention is kept whole, and for a week both sides have, every stored cell the file
+// does not fill survives. The file still wins a slot both fill — the restore changes which
+// task sits there, but it never empties a slot that held something.
 export function mergeImportedWeeks(storedWeeks, importedWeeks) {
   const asMap = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
-  return { ...asMap(storedWeeks), ...asMap(importedWeeks) };
+  const stored = asMap(storedWeeks);
+  const out = { ...stored };
+  for (const [key, week] of Object.entries(asMap(importedWeeks))) {
+    const storedWeek = stored[key];
+    const importedCells = (week && typeof week === "object" && week.cells) || {};
+    out[key] = storedWeek && storedWeek.cells
+      ? { ...week, cells: { ...storedWeek.cells, ...importedCells } }
+      : week;
+  }
+  return out;
+}
+
+// The file is the truth for every task id it carries, but import must not erase a task the
+// file omits: a stored week may still hold that task's cells, and dropping the task would turn
+// them into "Unknown task" — the very damage this fix exists to stop. So keep the omitted
+// tasks. This mirrors mergeImportedWeeks and honours the domain rule that a task is retired,
+// never removed.
+export function mergeImportedTasks(storedTasks, importedTasks) {
+  return mergeImportedList(storedTasks, importedTasks, (t) => t && t.id != null, (t) => t.id);
+}
+
+// Same contract, one level up: a kept task needs its category to stay in Balance's buckets.
+export function mergeImportedCategories(storedCategories, importedCategories) {
+  return mergeImportedList(storedCategories, importedCategories, (c) => c && c.id != null, (c) => c.id);
+}
+
+// Shared shape for the two list merges above: the file's entries first, then every stored
+// entry whose id the file omits. The file wins a shared id. Pure and non-mutating.
+function mergeImportedList(stored, imported, valid, idOf) {
+  const asList = (v) => (Array.isArray(v) ? v.filter(valid) : []);
+  const first = asList(imported);
+  const have = new Set(first.map(idOf));
+  return [...first, ...asList(stored).filter((x) => !have.has(idOf(x)))];
 }
 
 // Bring a stored `settings` object up to the current shape. Sibling of

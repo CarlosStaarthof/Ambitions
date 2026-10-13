@@ -11,16 +11,24 @@ from the owner's export (all week keys are valid Mondays; no cell points at a mi
 id; `t2`, `t4`, `t6` gone from `tasks`). The prior week-key-lookup theory is disproved and
 was **not** implemented.
 
-- Spec: `specs/fixes/issue-3.md` (12 ACs). Replaces the fix narrative in
-  `specs/features/007-week-integrity-fix.md`.
-- Report: `progress/impl_issue-3.md`.
-- Audit: feature 7 already made task/category deletion unable to touch `weeks`. The one
-  remaining writer that reaches history was **import**, which replaced the whole `weeks`
-  object with the file's.
-- Fix: pure `mergeImportedWeeks` in `src/lib/seed.js`; `DataTab` import now merges, so a
-  stored week the file omits survives. Export stays `version: 5`; no migration.
-- Tests: 8 added (5 for the merge, 1 retirement-vs-history, 1 import source-read). Gate:
-  `bash init.sh` → `[OK]`, 135 tests.
+**Round 1** (committed `a4a424c`): spec `specs/fixes/issue-3.md`; audit showed the only
+remaining `weeks` writer that reached history was **import**; added `mergeImportedWeeks` so a
+stored week the file omits survives. Report: `progress/impl_issue-3.md`.
+
+**Round 2** (this round): closed the other two halves of the same hole. Import kept a stored
+week but replaced `tasks`/`categories` wholesale, so a kept week could lose the task its
+cells named (cell survives, renders `Unknown task`), and a shared week lost any stored cell
+the file did not fill.
+- `mergeImportedWeeks` is now a **cell-level union**: a shared week keeps every stored cell,
+  the file wins a slot both fill, no slot is ever emptied by an import.
+- New pure `mergeImportedTasks` / `mergeImportedCategories` in `src/lib/seed.js`: the file
+  wins a shared id, a stored task/category the file omits is **kept** (import is
+  non-destructive for the task list, matching the retire-never-remove rule).
+- `DataTab` import persists `normalizeModel(mergeImportedTasks(...), mergeImportedCategories(...))`
+  and `mergeImportedWeeks(...)`; confirm copy now says weeks, tasks and categories the file
+  does not contain are kept.
+- Tests: 6 added, written red against the pre-change source (verified: 6 failed, then green).
+  Gate: `bash init.sh` → `[OK]`, 140 tests.
 
 ### Not recoverable
 
@@ -48,7 +56,7 @@ Nothing from features 3 or 7, nor this issue-3 fix, has reached the phone. All n
 - `WeekTab`'s "clear this week" replaces the whole week object (`{ cells: {} }`) rather than
   `{ ...wk, cells: {} }`; scoped to the on-screen week, so no cell outside it is removed.
   Feature 8 owns the fix before adding an `approved` field.
-- Import still replaces `tasks` / `categories` / `questions` / `reflections` / `vision`
-  wholesale; only `weeks` is merge-protected (issue-3).
+- Import still replaces `questions` / `reflections` / `vision` wholesale; the task, category
+  and week keys are now merge-protected (issue-3, rounds 1–2).
 - Release note item: a user who deletes every guiding question now keeps an empty list
   rather than silently getting the seed seven back.

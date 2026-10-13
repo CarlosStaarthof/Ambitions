@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
-  normalizeModel, backfillOpenWeeks, mergeImportedWeeks, loadDecision, AMBITION_ID, OPEN_ID,
-  SEED_TASKS, SEED_CATEGORIES, DAYS, SLOTS, CELLS
+  normalizeModel, backfillOpenWeeks, mergeImportedWeeks, mergeImportedTasks, mergeImportedCategories,
+  loadDecision, AMBITION_ID, OPEN_ID, SEED_TASKS, SEED_CATEGORIES, DAYS, SLOTS, CELLS
 } from "../../src/lib/seed.js";
-import { activeTasks, activeCategories, retiredTasks } from "../../src/lib/tasks.js";
+import { activeTasks, activeCategories, retiredTasks, taskIndex, resolveCell } from "../../src/lib/tasks.js";
 
 describe("seed shape", () => {
   it("keeps the finite-week arithmetic the product rests on", () => {
@@ -281,6 +281,16 @@ describe("merging imported weeks", () => {
     expect(imported).toEqual({ "2026-08-24": { cells: { "0-0": "t9" } }, "2026-09-07": C });
   });
 
+  // AC-1 — the cell-level half: a shared week keeps every stored cell the file does not fill.
+  it("merges a shared week cell by cell, so a stored cell the file lacks survives", () => {
+    const stored = { "2026-09-07": { cells: { "0-0": "old", "0-1": "kept" } } };
+    const imported = { "2026-09-07": { cells: { "0-0": "new", "0-2": "added" } } };
+    const out = mergeImportedWeeks(stored, imported);
+    expect(out["2026-09-07"].cells).toEqual({ "0-0": "new", "0-1": "kept", "0-2": "added" });
+    expect(stored["2026-09-07"].cells).toEqual({ "0-0": "old", "0-1": "kept" });
+    expect(imported["2026-09-07"].cells).toEqual({ "0-0": "new", "0-2": "added" });
+  });
+
   // AC-2
   it("removes nothing when the imported file has no weeks", () => {
     const stored = { "2026-08-24": A, "2026-08-31": B };
@@ -309,5 +319,63 @@ describe("merging imported weeks", () => {
     expect(mergeImportedWeeks(null, null)).toEqual({});
     expect(() => mergeImportedWeeks("nope", 7)).not.toThrow();
     expect(mergeImportedWeeks("nope", 7)).toEqual({});
+  });
+});
+
+describe("merging imported tasks and categories", () => {
+  const T = (id, extra = {}) => ({ id, name: id, categoryId: "work", color: "#000000", target: null, ...extra });
+  const CATS = [
+    { id: AMBITION_ID, name: "Ambition", protected: true },
+    { id: "work", name: "Work", protected: false }
+  ];
+
+  // AC-13 — the file wins a shared id, anything it omits is kept, nothing mutates.
+  it("keeps stored tasks the file omits and lets the file win a shared id", () => {
+    const stored = [T("a", { name: "Stored A" }), T("b"), T("c", { retired: true, retiredAt: "2026-09-29T00:00:00.000Z" })];
+    const imported = [T("a", { name: "File A" }), T("d")];
+    const out = mergeImportedTasks(stored, imported);
+    expect(out.map((t) => t.id)).toEqual(["a", "d", "b", "c"]);
+    expect(out[0].name).toBe("File A");
+    expect(out.find((t) => t.id === "b")).toEqual(stored[1]);
+    expect(out.find((t) => t.id === "c")).toEqual(stored[2]);
+    // neither input is mutated
+    expect(stored.map((t) => t.name)).toEqual(["Stored A", "b", "c"]);
+    expect(imported[0].name).toBe("File A");
+  });
+
+  it("treats absent or non-array task input as empty", () => {
+    expect(mergeImportedTasks(undefined, undefined)).toEqual([]);
+    expect(mergeImportedTasks(null, "nope")).toEqual([]);
+    expect(mergeImportedTasks([T("a")], undefined)).toEqual([T("a")]);
+  });
+
+  // AC-14
+  it("merges categories the same non-destructive way", () => {
+    const stored = [...CATS, { id: "old", name: "Old life", protected: false, retired: true }];
+    const imported = [{ id: AMBITION_ID, name: "Ambition", protected: true }, { id: "work", name: "Job", protected: false }];
+    const out = mergeImportedCategories(stored, imported);
+    expect(out.map((c) => c.id)).toEqual([AMBITION_ID, "work", "old"]);
+    expect(out.find((c) => c.id === "work").name).toBe("Job");
+    expect(out.find((c) => c.id === "old")).toEqual(stored[2]);
+    expect(mergeImportedCategories(undefined, undefined)).toEqual([]);
+  });
+
+  // AC-16 — the issue's parenthetical, end to end through the pure merge: a stored week the
+  // file omits keeps its cells, and the task those cells name is retained, so it still resolves.
+  it("keeps a past cell's task name after an import that omits that task", () => {
+    const storedTasks = [T("run", { name: "Evening run", color: "#22c55e" })];
+    const storedWeeks = { "2026-09-07": { cells: { "0-36": "run", "0-37": "run" } } };
+    const imported = {
+      tasks: [T("other", { name: "Other" })],
+      categories: CATS,
+      weeks: {}
+    };
+
+    const weeks = mergeImportedWeeks(storedWeeks, imported.weeks);
+    const model = normalizeModel(mergeImportedTasks(storedTasks, imported.tasks), mergeImportedCategories(CATS, imported.categories));
+    const index = taskIndex(model.tasks);
+
+    expect(resolveCell(weeks["2026-09-07"].cells["0-36"], index)).toEqual({ kind: "task", name: "Evening run", color: "#22c55e", code: "ER" });
+    expect(resolveCell(weeks["2026-09-07"].cells["0-37"], index).name).toBe("Evening run");
   });
 });
