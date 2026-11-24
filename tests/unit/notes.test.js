@@ -192,6 +192,13 @@ describe("cleanDictation", () => {
     expect(once).toBe("the meeting was fine");
     expect(cleanDictation(once)).toBe(once);
   });
+
+  it("stays idempotent when removing you know exposes a repeated word", () => {
+    for (const input of ["you you know know", "um um you you know know"]) {
+      const once = cleanDictation(input);
+      expect(cleanDictation(once)).toBe(once);
+    }
+  });
 });
 
 describe("mergeImportedNotes", () => {

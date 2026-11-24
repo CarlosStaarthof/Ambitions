@@ -9,7 +9,28 @@ the gate allows.
 500 ms, moves in 500 ms steps, and maxes out at 3000 ms. Minimum is 500 ms. The Settings row
 and the shared clamp are built against that range.
 
-## Round 3 — feature 12 hold-time setting (this round)
+## Round 4 — feature 12 review fixes (this round)
+
+Addressed both required changes in `progress/review_mwv4y4y9.md`:
+
+- `src/lib/notes.js` `cleanDictation` now repeats the filler-removal, "you know" removal,
+  repeat-collapse and whitespace steps until the output stops changing, so a second pass is
+  a true no-op. The result still satisfies the AC-7 examples. A brute-force over every 1–5
+  token string drawn from {um, uh, you, know, I, think, the, UM, Know} now finds zero
+  non-idempotent inputs (previously 112).
+- `tests/unit/notes.test.js`: new idempotence cases for `"you you know know"` and
+  `"um um you you know know"`.
+- New `tests/unit/notePolish.test.js` (6 tests): mocks only the `callAI` transport and covers
+  `polish-disabled` when AI is off, the provider is `none`, the key is missing/empty, or the
+  text is blank; a success path asserting `{ text }`, the key only in the call context and
+  absent from the return; and `polish-failed` when the transport rejects or answers empty.
+- Gate: `npm test --silent` → 8 files, 215 tests passed. `bash init.sh` →
+  `[OK] build green, tests green, scope clean`.
+
+**Remaining for feature 12:** device-only checks (AC-8 to AC-11, marker half of AC-14,
+dictation/polish UI half of AC-15). No source work remains.
+
+## Round 3 — feature 12 hold-time setting
 
 - `src/lib/seed.js`: new `LONG_PRESS_MIN = 500`, `LONG_PRESS_MAX = 3000`,
   `LONG_PRESS_STEP = 500` and pure `clampLongPressMs(value)` (non-finite → 500, snaps to the

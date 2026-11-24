@@ -115,11 +115,16 @@ export function removeNote(notes, id) {
 // collapse whitespace and trim. Deliberately idempotent so a second pass is a no-op.
 export function cleanDictation(text) {
   if (typeof text !== "string") return "";
-  let out = text.replace(/\b(?:uh|um)\b/gi, " ");
-  out = out.replace(/\byou\s+know\b/gi, " ");
-  out = out.replace(/\s+/g, " ").trim();
-  out = out.replace(/\b([A-Za-z]+)(?:\s+\1\b)+/gi, "$1");
-  out = out.replace(/\s+/g, " ").trim();
+  let out = text;
+  let previous;
+  do {
+    previous = out;
+    out = out.replace(/\b(?:uh|um)\b/gi, " ");
+    out = out.replace(/\byou\s+know\b/gi, " ");
+    out = out.replace(/\s+/g, " ").trim();
+    out = out.replace(/\b([A-Za-z]+)(?:\s+\1\b)+/gi, "$1");
+    out = out.replace(/\s+/g, " ").trim();
+  } while (out !== previous);
   return out;
 }
 
