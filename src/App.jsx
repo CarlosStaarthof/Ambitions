@@ -119,7 +119,7 @@ export default function App() {
           </>
         )}
 
-        {section === "vision" && <VisionTab vision={store.vision} setVisionP={store.setVisionP} tasks={store.tasks} categories={store.categories} />}
+        {section === "vision" && <VisionTab vision={store.vision} setVisionP={store.setVisionP} />}
 
         {section === "settings" && <SettingsTab store={store} />}
       </div>

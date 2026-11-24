@@ -1,9 +1,20 @@
 # Current session
 
 **Date:** 2026-11-24
-**In flight:** feature 12 `block-notes` — round 3 (hold-time setting built; feature complete
-for review). Feature 11 `reminder-wall` is `in_review`; 12 is the single `in_progress` feature
-the gate allows.
+**In flight:** feature 13 `vision-board-text` — round 1 (implemented, gate green, awaiting
+review). Feature 12 `block-notes` moved to `in_review`; 11 `reminder-wall` is also
+`in_review`. 13 is the single `in_progress` feature the gate allows.
+
+## Round 6 — feature 13 vision board text + This year
+
+Owner asked to break the Vision Board's link to an Ambition task and replace it with an open
+text field capped at 250–300 chars (chosen: 280), add a "This year" jump like the Week tab's
+"Today", keep "What <year> looks like", put the reached count beside the title with Add image
+on the right, and drop the KB/MB image-size readout. Done in `src/components/VisionTab.jsx`,
+new pure `src/lib/vision.js` (+ `normalizeVision` on load in `useStore`), `App.jsx` props
+trimmed, new `tests/unit/vision.test.js`. Spec `specs/features/013-vision-board-text.md`.
+Detail: `progress/impl_vision-board-text.md`. Gate: `npm test --silent` → 9 files, 233
+tests; `bash init.sh` → `[OK]`. Remaining: review + device-only 390 px visual check.
 
 **Open question 4 is answered by the owner (2026-11-24):** `settings.longPressMs` defaults to
 500 ms, moves in 500 ms steps, and maxes out at 3000 ms. Minimum is 500 ms. The Settings row

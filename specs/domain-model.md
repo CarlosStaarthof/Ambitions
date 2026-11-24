@@ -45,8 +45,8 @@ stop and escalate rather than invent a rule.
 
 - Grouped by **year** — the horizon above the week and the month.
 - `img` is a downscaled JPEG data URI (max edge 1200px).
-- `caption` is the image's description. It is used for other purposes later, so it is
-  captured at commitment time and then frozen (see the window rules below).
+- `caption` is the image's free open text, capped at 280 characters. It is not linked to
+  any task. It is captured at commitment time and then frozen (see the window rules below).
 - There is **no link to an Ambition task**. Any `taskId` on existing data is dropped by
   migration.
 - Every image is tickable. There is no "perpetual / never-ending" flag — an ongoing

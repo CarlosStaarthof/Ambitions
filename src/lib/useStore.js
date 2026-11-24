@@ -5,6 +5,7 @@ import { mondayOf, isoDate } from "./time";
 import { NONE, PROVIDERS } from "./providers";
 import { secureGet, secureSet, secureRemove, aiKeyName } from "./secureStore";
 import { emptyReminderWall, normalizeReminderWall } from "./reminderWall";
+import { normalizeVision } from "./vision";
 
 // App-wide preferences (not week data). Lives under one localForage key so new
 // settings can be added without new plumbing. `ai` drives the "any model, or none"
@@ -94,7 +95,7 @@ export function useStore() {
 
       setWeeks(w.value || {});
       setReflections(r.value || {});
-      setVision(vis.value || {});
+      setVision(normalizeVision(vis.value));
       // Missing or malformed wall shapes are repaired in memory, never rewritten on load.
       setReminderWall(normalizeReminderWall(rw.value));
       setAiKeys(keys);

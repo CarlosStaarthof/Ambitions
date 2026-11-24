@@ -201,9 +201,18 @@
       "id": 12,
       "name": "block-notes",
       "title": "Dictated text notes on a same-category run of Plan & Balance week blocks",
-      "status": "in_progress",
+      "status": "in_review",
       "spec": "specs/features/012-block-notes.md",
       "why": "A painted week cell records only which task occupied it. Long-press a block to attach one text note to the whole unbroken run of the same category above and below it in that day (a sleep or a work shift); the note is typed or dictated with the phone's speech-to-text and cleaned without AI. Optional AI polish needs the user's own on-device key and is off by default. No audio is stored. Notes live inside the existing weeks key so they survive export and import.",
+      "acceptance": []
+    },
+    {
+      "id": 13,
+      "name": "vision-board-text",
+      "title": "Vision Board: open text, no task link, This year jump",
+      "status": "in_progress",
+      "spec": "specs/features/013-vision-board-text.md",
+      "why": "The board tied every picture to an Ambition task, which turned a mood board into a second task list. Each card should instead carry up to 280 characters of free text linked to nothing, and the year switcher needs a This year jump like the week grid's Today so browsing to a past year does not strand the user there. The KB readout of images is removed from the header.",
       "acceptance": []
     }
   ]
