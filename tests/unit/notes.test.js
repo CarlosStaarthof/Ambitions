@@ -338,3 +338,21 @@ describe("source guarantees for the week note UI", () => {
     expect(line).toMatch(/aiEnabled=\{aiEnabled\}/);
   });
 });
+
+describe("source guarantees for the hold-time setting", () => {
+  const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+
+  it("renders a settings row that changes the hold time in clamped 500 ms steps", () => {
+    const settings = read("../../src/components/SettingsTab.jsx");
+    expect(settings).toMatch(/clampLongPressMs/);
+    expect(settings).toMatch(/LONG_PRESS_MIN/);
+    expect(settings).toMatch(/LONG_PRESS_MAX/);
+    expect(settings).toMatch(/LONG_PRESS_STEP/);
+    expect(settings).toMatch(/longPressMs/);
+  });
+
+  it("uses the same clamp in the grid gesture as the settings row", () => {
+    const week = read("../../src/components/WeekTab.jsx");
+    expect(week).toMatch(/clampLongPressMs\(settings && settings\.longPressMs\)/);
+  });
+});

@@ -193,6 +193,20 @@ function mergeImportedList(stored, imported, valid, idOf) {
   return [...first, ...asList(stored).filter((x) => !have.has(idOf(x)))];
 }
 
+// Long-press hold time, in milliseconds. The owner fixed the range: default 500,
+// adjustable in 500 ms steps, never above 3000. Kept next to mergeSettings so a
+// stored value is repaired on load and the UI and the gesture agree on the bounds.
+export const LONG_PRESS_MIN = 500;
+export const LONG_PRESS_MAX = 3000;
+export const LONG_PRESS_STEP = 500;
+
+export function clampLongPressMs(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return LONG_PRESS_MIN;
+  const snapped = Math.round(n / LONG_PRESS_STEP) * LONG_PRESS_STEP;
+  return Math.min(LONG_PRESS_MAX, Math.max(LONG_PRESS_MIN, snapped));
+}
+
 // Bring a stored `settings` object up to the current shape. Sibling of
 // normalizeModel: a settings key added by a later feature has to appear for people
 // who already have settings on disk, and a per-source group (`ai`, `reminders`) has
@@ -219,5 +233,6 @@ export function mergeSettings(defaults, stored) {
     }
   }
   if (out.ai && "keys" in out.ai) { out.ai = { ...out.ai }; delete out.ai.keys; }
+  if ("longPressMs" in base) out.longPressMs = clampLongPressMs(out.longPressMs);
   return out;
 }

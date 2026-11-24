@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { ChevronLeft, ChevronRight, Eraser, Plus, X, Mic, Sparkles, Trash2 } from "lucide-react";
 import { addDays, isoDate, slotLabel, endLabel, weekStatsOf, mondayOf, uid, nextColor, fmtHM } from "../lib/time";
-import { DAYS, SLOTS, OPEN_ID } from "../lib/seed";
+import { DAYS, SLOTS, OPEN_ID, clampLongPressMs } from "../lib/seed";
 import { activeTasks, activeCategories, taskIndex, resolveCell } from "../lib/tasks";
 import { notesOf, categoryRunAt, noteAt, canPlaceNote, addNote, updateNote, removeNote, cleanDictation } from "../lib/notes";
 import { dictationSupported, startDictation, cancelDictation } from "../lib/dictation";
@@ -50,7 +50,7 @@ export default function WeekTab({ tasks, categories, weeks, settings, ai, aiEnab
   const holdRef = useRef(null);
   const { arm, isArmed } = useArmed();
   const now = useNow();
-  const holdMs = settings && Number.isFinite(settings.longPressMs) ? settings.longPressMs : 500;
+  const holdMs = clampLongPressMs(settings && settings.longPressMs);
   const canDictate = dictationSupported();
 
   useEffect(() => { const up = () => { paintingRef.current = false; }; window.addEventListener("mouseup", up); return () => window.removeEventListener("mouseup", up); }, []);

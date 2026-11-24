@@ -88,13 +88,30 @@ permission, and the plugin registration order.
 Tests: 5 source tests added to `tests/unit/notes.test.js`. `npm test --silent` → 203 passed;
 `bash init.sh` → `[OK] build green, tests green, scope clean`.
 
-## Not done (next rounds)
+## Round 3 — hold-time setting and owner's range
 
-- SettingsTab: hold-time row, **blocked on open question 4** (minimum/maximum of
-  `longPressMs`). The range was not guessed.
+The owner answered open question 4 on 2026-11-24: default 500 ms, steps of 500 ms, maximum
+3000 ms; minimum is therefore 500 ms. Built against that:
+
+- `src/lib/seed.js`: `LONG_PRESS_MIN = 500`, `LONG_PRESS_MAX = 3000`, `LONG_PRESS_STEP = 500`
+  and pure `clampLongPressMs(value)`. A non-finite value returns 500, otherwise it snaps to
+  the nearest 500 ms step and clamps to 500…3000. `mergeSettings` applies it when the defaults
+  carry `longPressMs`, so an existing install with a missing or malformed value is repaired in
+  memory (no load-time write). Idempotent.
+- `src/components/WeekTab.jsx`: the gesture uses the same `clampLongPressMs`, so the timer and
+  the Settings row can never disagree.
+- `src/components/SettingsTab.jsx`: new "Week note hold time" card, − / + in 500 ms steps,
+  disabled at 0.5 s and 3.0 s, seconds shown. Preference only — no new localForage key.
+- Tests: 3 in `tests/unit/seed.test.js` (defaults, both clamp ends, idempotent merge) and 2
+  source checks in `tests/unit/notes.test.js` (row wiring, shared clamp in the grid).
+- `npm test --silent` → 7 files, 208 tests passed. `bash init.sh` → `[OK]`.
+
+## Not done (device only)
+
 - Device-only verification: AC-8, AC-9, AC-10, AC-11, marker half of AC-14, dictation/polish
-  UI half of AC-15.
+  UI half of AC-15. No source work remains for feature 12.
 
-## Open question
+## Open questions
 
-`QUESTION: What minimum and maximum should settings.longPressMs have (it moves in 500 ms steps and defaults to 500)?`
+None. Open question 4 was answered by the owner on 2026-11-24 (500 ms default, 500 ms steps,
+3000 ms maximum).

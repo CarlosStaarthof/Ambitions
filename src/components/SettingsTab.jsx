@@ -1,13 +1,39 @@
 import { useState, useEffect } from "react";
-import { Sparkles, Eye, EyeOff, Loader2, ExternalLink, Check, Bell } from "lucide-react";
+import { Sparkles, Eye, EyeOff, Loader2, ExternalLink, Check, Bell, Timer, Minus, Plus } from "lucide-react";
 import { card, selectCls, inputCls, btnGhost } from "../lib/ui";
 import { PROVIDERS, NONE, providerById } from "../lib/providers";
 import { fetchModels, aiErrorText } from "../lib/ai";
 import { REMINDER_SOURCES } from "../lib/reminders";
+import { clampLongPressMs, LONG_PRESS_MIN, LONG_PRESS_MAX, LONG_PRESS_STEP } from "../lib/seed";
 import { notifySupported, notifyPermission, requestNotifyPermission } from "../lib/notify";
 import DataTab from "./DataTab";
 
 const CUSTOM = "__custom__";
+
+// The hold time is a preference, not week data. Both buttons clamp through the same
+// helper the gesture uses, so the label can never promise a value the timer ignores.
+function LongPressCard({ store }) {
+  const value = clampLongPressMs(store.settings && store.settings.longPressMs);
+  const set = (next) => store.setSettingsP((prev) => ({ ...prev, longPressMs: clampLongPressMs(next) }));
+  return (
+    <div className={card + " p-4 space-y-3"}>
+      <div className="flex items-center gap-2 text-sm font-medium"><Timer size={16} className="text-amber-400" /> Week note hold time</div>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm text-zinc-300">Long-press to open a note</span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button onClick={() => set(value - LONG_PRESS_STEP)} disabled={value <= LONG_PRESS_MIN} aria-label="Shorter hold"
+            className="p-1 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"><Minus size={13} /></button>
+          <span className="text-sm text-zinc-100 tabular-nums w-12 text-center">{(value / 1000).toFixed(1)} s</span>
+          <button onClick={() => set(value + LONG_PRESS_STEP)} disabled={value >= LONG_PRESS_MAX} aria-label="Longer hold"
+            className="p-1 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"><Plus size={13} /></button>
+        </div>
+      </div>
+      <p className="text-[11px] text-zinc-500 leading-relaxed">
+        How long a finger rests on a filled week block before its note opens. {LONG_PRESS_MIN / 1000}–{LONG_PRESS_MAX / 1000} s in {LONG_PRESS_STEP / 1000} s steps. The note gesture runs only when no brush is selected.
+      </p>
+    </div>
+  );
+}
 
 // Rendered from the reminder registry, so feature 6 adds a source and gets a row
 // here for free. The permission is requested at the moment of intent — switching a
@@ -188,6 +214,8 @@ export default function SettingsTab({ store }) {
           </div>
         )}
       </div>
+
+      <LongPressCard store={store} />
 
       <RemindersCard store={store} />
 

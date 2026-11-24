@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   normalizeModel, backfillOpenWeeks, mergeImportedWeeks, mergeImportedTasks, mergeImportedCategories,
+  mergeSettings, clampLongPressMs, LONG_PRESS_MIN, LONG_PRESS_MAX, LONG_PRESS_STEP,
   loadDecision, AMBITION_ID, OPEN_ID, SEED_TASKS, SEED_CATEGORIES, DAYS, SLOTS, CELLS
 } from "../../src/lib/seed.js";
 import { activeTasks, activeCategories, retiredTasks, taskIndex, resolveCell } from "../../src/lib/tasks.js";
@@ -378,5 +379,36 @@ describe("merging imported tasks and categories", () => {
 
     expect(resolveCell(weeks["2026-09-07"].cells["0-36"], index)).toEqual({ kind: "task", name: "Evening run", color: "#22c55e", code: "ER" });
     expect(resolveCell(weeks["2026-09-07"].cells["0-37"], index).name).toBe("Evening run");
+  });
+});
+
+describe("long-press hold time", () => {
+  const DEFAULTS = { longPressMs: 500 };
+
+  it("defaults to 500 ms and steps in 500 ms up to 3000 ms", () => {
+    expect(LONG_PRESS_MIN).toBe(500);
+    expect(LONG_PRESS_MAX).toBe(3000);
+    expect(LONG_PRESS_STEP).toBe(500);
+    expect(clampLongPressMs(undefined)).toBe(500);
+    expect(clampLongPressMs(null)).toBe(500);
+    expect(clampLongPressMs(NaN)).toBe(500);
+    expect(clampLongPressMs(0)).toBe(500);
+    expect(clampLongPressMs(1234)).toBe(1000);
+    expect(clampLongPressMs(2600)).toBe(2500);
+    expect(clampLongPressMs(999999)).toBe(3000);
+  });
+
+  it("fills the default for an existing install that lacks it and clamps a stored value", () => {
+    expect(mergeSettings(DEFAULTS, {}).longPressMs).toBe(500);
+    expect(mergeSettings(DEFAULTS, { ai: { enabled: false } }).longPressMs).toBe(500);
+    expect(mergeSettings(DEFAULTS, { longPressMs: 1500 }).longPressMs).toBe(1500);
+    expect(mergeSettings(DEFAULTS, { longPressMs: 42 }).longPressMs).toBe(500);
+    expect(mergeSettings(DEFAULTS, { longPressMs: 9000 }).longPressMs).toBe(3000);
+  });
+
+  it("is idempotent through mergeSettings", () => {
+    const once = mergeSettings(DEFAULTS, { longPressMs: 2700 });
+    expect(once.longPressMs).toBe(2500);
+    expect(mergeSettings(DEFAULTS, once).longPressMs).toBe(2500);
   });
 });

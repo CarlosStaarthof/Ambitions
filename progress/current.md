@@ -1,15 +1,32 @@
 # Current session
 
 **Date:** 2026-11-24
-**In flight:** feature 12 `block-notes` — round 2 (core, data, dictation and Week tab UI done). Not complete.
-Feature 11 `reminder-wall` was moved from `in_progress` to `in_review` (implemented, waiting on
-its reviewer); 12 is now the single `in_progress` feature the gate allows.
+**In flight:** feature 12 `block-notes` — round 3 (hold-time setting built; feature complete
+for review). Feature 11 `reminder-wall` is `in_review`; 12 is the single `in_progress` feature
+the gate allows.
 
-**Open question 4 still needs the owner:** `settings.longPressMs` minimum and maximum. The
-range was deliberately not guessed, so the Settings row and the hold-time clamp are still not
-built. Everything else in the feature is independent of it and is now built.
+**Open question 4 is answered by the owner (2026-11-24):** `settings.longPressMs` defaults to
+500 ms, moves in 500 ms steps, and maxes out at 3000 ms. Minimum is 500 ms. The Settings row
+and the shared clamp are built against that range.
 
-## Round 2 — feature 12 Week tab notes UI (this round)
+## Round 3 — feature 12 hold-time setting (this round)
+
+- `src/lib/seed.js`: new `LONG_PRESS_MIN = 500`, `LONG_PRESS_MAX = 3000`,
+  `LONG_PRESS_STEP = 500` and pure `clampLongPressMs(value)` (non-finite → 500, snaps to the
+  nearest step, clamps to 500…3000). `mergeSettings` runs it when defaults carry
+  `longPressMs`, so a malformed older value is repaired in memory without a load-time write.
+- `src/components/WeekTab.jsx`: the gesture now uses `clampLongPressMs(settings.longPressMs)`,
+  the same helper as the Settings row, instead of trusting the stored number.
+- `src/components/SettingsTab.jsx`: new "Week note hold time" card with − / + buttons in
+  500 ms steps, disabled at 0.5 s and 3.0 s, showing the seconds value. No new localForage key.
+- Tests: 3 added to `tests/unit/seed.test.js` (defaults, clamping both ends, idempotent merge)
+  and 2 source checks to `tests/unit/notes.test.js` (settings row wiring, grid uses the same
+  clamp). `npm test --silent` → 7 files, 208 tests passed. `bash init.sh` → `[OK]`.
+
+**Remaining for feature 12:** device-only checks (AC-8 to AC-11, marker half of AC-14,
+dictation/polish UI half of AC-15). No source work remains.
+
+## Round 2 — feature 12 Week tab notes UI
 
 - `src/components/WeekTab.jsx` now owns the note gesture and surfaces:
   - long-press on a filled cell with **no brush selected** waits `settings.longPressMs`
@@ -36,8 +53,8 @@ built. Everything else in the feature is independent of it and is now built.
   note, hold time + brush guard, `touch-action`/marker, cleaned dictation/polish gating, and
   the App props). `npm test --silent` → 7 files, 203 tests passed. `bash init.sh` → `[OK]`.
 
-**Remaining for feature 12:** the SettingsTab hold-time row (blocked on open question 4:
-minimum/maximum of `settings.longPressMs`), and the device-only checks for AC-8 to AC-11, the
+**Remaining for feature 12 after round 2:** the SettingsTab hold-time row (blocked on open
+question 4, answered and built in round 3) and the device-only checks for AC-8 to AC-11, the
 marker half of AC-14, and the dictation/polish UI half of AC-15.
 
 ## Round 1 — feature 12 core, data and dictation
