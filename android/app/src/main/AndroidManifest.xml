@@ -45,6 +45,10 @@
          on API 33+, and only at the moment the user switches a reminder on. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Dictation (block notes). Runtime-requested by DictationPlugin the first time
+         the microphone is used. The transcript is text; no audio is stored. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- Every reminder is day-granularity and tolerates drift, so nothing here needs
          an exact alarm. A dependency merging one of these in would attract a Play
          Store declaration and rejection risk for a capability the app never uses. -->

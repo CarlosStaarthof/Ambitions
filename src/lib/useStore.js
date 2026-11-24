@@ -18,7 +18,11 @@ import { emptyReminderWall, normalizeReminderWall } from "./reminderWall";
 // load, because the OS drops pending alarms on reboot and a stored copy would lie.
 export const DEFAULT_SETTINGS = {
   ai: { enabled: false, provider: NONE, model: null },
-  reminders: { reflection: { enabled: false } }
+  reminders: { reflection: { enabled: false } },
+  // How long a finger must rest on a filled week cell before the note gesture
+  // starts, in milliseconds. A user setting, never week data. Absent on older
+  // installs, so mergeSettings fills it on load.
+  longPressMs: 500
 };
 
 export function useStore() {

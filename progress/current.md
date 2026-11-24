@@ -1,11 +1,39 @@
 # Current session
 
 **Date:** 2026-11-24
-**In flight:** feature 11 `reminder-wall` — implemented this round, awaiting review.
-Specs 011 and 012 are now `approved`; feature 12 is not started.
-**Unblocked:** review of 11; feature 12 can start after 11 is reviewed.
+**In flight:** feature 12 `block-notes` — round 1 (core + data + dictation plugin). Not complete.
+Feature 11 `reminder-wall` was moved from `in_progress` to `in_review` (implemented, waiting on
+its reviewer); 12 is now the single `in_progress` feature the gate allows.
 
-## This round — feature 11 implemented (awaiting review)
+**Open question 4 still needs the owner:** `settings.longPressMs` minimum and maximum. The
+range was deliberately not guessed, so the Settings row and the hold-time clamp are not built
+yet. Everything else in this round is independent of it.
+
+## Round 1 — feature 12 core, data and dictation (this round)
+
+- New pure `src/lib/notes.js`: `notesOf`, `categoryRunAt`, `noteAt`, `canPlaceNote`,
+  `validateNote`, `addNote`, `updateNote`, `removeNote`, `cleanDictation`,
+  `mergeImportedNotes`. Same 336-cell/48-slot grid, half-open `[start, end)` ranges, day-bounded
+  runs, no `taskId`/`audio`/key field. Error codes: `range-invalid`, `empty-note`, `overlap`,
+  `note-not-found`.
+- `mergeImportedWeeks` now merges `notes` by id with the same rule as tasks/categories; old files
+  with no notes import with none and no new field.
+- `DEFAULT_SETTINGS.longPressMs = 500`; `mergeSettings` gives it to existing installs.
+- New `src/lib/dictation.js` (native `Dictation` plugin or web SpeechRecognition, text only) and
+  `src/lib/notePolish.js` (explicit, opt-in, `polish-disabled` on the default path).
+- Android: `RECORD_AUDIO` added as the only new permission; new `DictationPlugin.java` using the
+  platform `SpeechRecognizer` with a first-use permission request; registered before
+  `super.onCreate()`.
+- `clear this week` now writes `{ ...wk, cells: {} }`, so notes survive.
+- Tests: new `tests/unit/notes.test.js` (36 tests) covering AC-2–7, AC-13, the export/envelope
+  source checks, the clear-week spread and the manifest/MainActivity half of AC-15.
+  `npm test --silent` → 7 files, 198 tests passed. `bash init.sh` → `[OK]`.
+
+**Remaining for feature 12:** WeekTab long-press gesture/edit/view/marker (AC-8, AC-9, AC-10,
+AC-11, marker half of AC-14), SettingsTab hold-time row (blocked on the range answer), the
+dictation/polish UI, and the device-only checks.
+
+## Earlier round — feature 11 implemented (awaiting review)
 
 Built the reminder wall exactly against `specs/features/011-reminder-wall.md` and the
 2026-11-18 owner rulings. No feature 12 work.

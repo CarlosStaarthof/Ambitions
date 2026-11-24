@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
         // Must be registered before super.onCreate() — that is where the bridge is built.
         registerPlugin(SecureStorePlugin.class);
         registerPlugin(FileSaverPlugin.class);
+        registerPlugin(DictationPlugin.class);
         super.onCreate(savedInstanceState);
         // Draw edge-to-edge behind the status and navigation bars. Without this
         // the WebView is laid out inside the system insets and the app looks

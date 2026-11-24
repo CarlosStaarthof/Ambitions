@@ -187,7 +187,12 @@ export default function WeekTab({ tasks, categories, weeks, setWeeksP, setTasksP
         </div>
 
         <div className="pt-1 flex items-center gap-2">
-          <button onClick={() => arm("clearWeek", () => setWeeksP((p) => ({ ...p, [weekKey]: { cells: {} } })))} className={"text-xs px-2 py-1 rounded-lg " + (isArmed("clearWeek") ? "bg-red-600 text-white" : "text-red-400 hover:bg-zinc-800")}>{isArmed("clearWeek") ? "tap to confirm" : "clear this week"}</button>
+          <button onClick={() => arm("clearWeek", () => setWeeksP((p) => {
+            const wk = p[weekKey] || { cells: {} };
+            // Notes are user writing about the time, not part of the schedule. The
+            // armed action clears blocks only; their markers stay anchored.
+            return { ...p, [weekKey]: { ...wk, cells: {} } };
+          }))} className={"text-xs px-2 py-1 rounded-lg " + (isArmed("clearWeek") ? "bg-red-600 text-white" : "text-red-400 hover:bg-zinc-800")}>{isArmed("clearWeek") ? "tap to confirm" : "clear this week"}</button>
           <button onClick={() => { setOpenName(""); setOpenDlg(true); }} className="text-xs px-2 py-1 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 inline-flex items-center gap-1"><Plus size={12} /> Open task</button>
         </div>
       </div>

@@ -1,3 +1,5 @@
+import { notesOf, mergeImportedNotes } from "./notes";
+
 export const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export const SLOTS = 48;                 // 30-min slots, 00:00–23:30
 export const CELLS = DAYS.length * SLOTS; // 336
@@ -154,9 +156,16 @@ export function mergeImportedWeeks(storedWeeks, importedWeeks) {
   for (const [key, week] of Object.entries(asMap(importedWeeks))) {
     const storedWeek = stored[key];
     const importedCells = (week && typeof week === "object" && week.cells) || {};
-    out[key] = storedWeek && storedWeek.cells
+    // `cells` merge as before. Notes are a sibling field, so the same rule applies at
+    // note depth: the file wins a shared id and stored notes the file omits survive.
+    const merged = storedWeek && storedWeek.cells
       ? { ...week, cells: { ...storedWeek.cells, ...importedCells } }
       : week;
+    const storedNotes = notesOf(storedWeek);
+    const importedNotes = notesOf(week);
+    out[key] = storedNotes.length || importedNotes.length
+      ? { ...merged, notes: mergeImportedNotes(storedNotes, importedNotes) }
+      : merged;
   }
   return out;
 }
