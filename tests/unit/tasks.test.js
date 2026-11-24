@@ -289,9 +289,10 @@ describe("structural guarantees (source-read)", () => {
       expect(read(p)).not.toMatch(/lookupWeek|weekKeyFor|resolveWeekKey|weekForDate/);
     }
     expect(read("../../src/components/WeekTab.jsx")).toMatch(/const weekKey = isoDate\(weekStart\)/);
-    // AC-12 — envelope untouched
+    // AC-12 — the import reaches weeks, tasks and categories through merges.
+    // (Feature 11 later bumped the envelope version and added its own field.)
     const payload = data.split("\n").find((l) => l.includes("const payload ="));
-    expect(payload).toMatch(/version:\s*5\b/);
+    expect(payload).toMatch(/version:\s*6\b/);
   });
 
   // AC-33
@@ -411,11 +412,11 @@ describe("structural guarantees (source-read)", () => {
     expect(tab).toMatch(/retiredTasks\(tasks\)/);
   });
 
-  // AC-43, the envelope half
-  it("leaves the export envelope at version 5 with the same field list", () => {
+  // AC-43, the envelope half — feature 11 bumps the version and appends its field.
+  it("keeps the export envelope field list, with the wall appended at version 6", () => {
     const payload = read("../../src/components/DataTab.jsx").split("\n").find((l) => l.includes("const payload ="));
-    expect(payload).toMatch(/version:\s*5\b/);
-    expect(payload).toMatch(/exportedAt.*tasks, categories, questions, weeks, reflections, vision/);
+    expect(payload).toMatch(/version:\s*6\b/);
+    expect(payload).toMatch(/exportedAt.*tasks, categories, questions, weeks, reflections, vision, reminderWall/);
   });
 
   // AC-44

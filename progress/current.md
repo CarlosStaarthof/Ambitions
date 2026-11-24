@@ -1,11 +1,33 @@
 # Current session
 
 **Date:** 2026-11-24
-**In flight:** no feature `in_progress` — specs 11 and 12 are `spec_ready`, awaiting owner approval
-**Unblocked:** feature 8 `week-approval` (its dependencies 3 and 7 are both done), and
-features 11 / 12 once their open questions are answered.
+**In flight:** feature 11 `reminder-wall` — implemented this round, awaiting review.
+Specs 011 and 012 are now `approved`; feature 12 is not started.
+**Unblocked:** review of 11; feature 12 can start after 11 is reviewed.
 
-## This round — owner rulings recorded in specs 011 and 012 (stopped for approval)
+## This round — feature 11 implemented (awaiting review)
+
+Built the reminder wall exactly against `specs/features/011-reminder-wall.md` and the
+2026-11-18 owner rulings. No feature 12 work.
+
+- New pure module `src/lib/reminderWall.js`: `emptyReminderWall`, `normalizeReminderWall`,
+  `activeReminders`, `archivedReminders`, `categoryUsage`, and the category/reminder CRUD
+  helpers plus `mergeImportedReminderWall`, with the exact error codes in the contract.
+- `useStore` reads and normalizes the eighth key `reminderWall`; `setReminderWallP` is its
+  only writer. Seeding still requires all eight reads to succeed and be empty.
+- Export is `version: 6` with `reminderWall`; import merges by id and normalizes, so a
+  stored wall survives a v4/v5 file that has no wall field.
+- New `Reminders` menu section with `Wall`/`Archive` sub-tabs; `ReminderWallTab` has
+  create/edit/tick-done post-its coloured by category, category CRUD with `useArmed`,
+  filter, archive view, and the specified empty states. No notifications, AI or time-block
+  data is touched.
+- Tests: new `tests/unit/reminderWall.test.js` (22); updated the pinned export/key
+  assertions in `reminders.test.js`, `seed.test.js` and `tasks.test.js` to version 6 and
+  eight keys (not weakened). `npm test --silent` → 6 files, 162 tests passed.
+- Gate: `bash init.sh` → `[OK] build green, tests green, scope clean`.
+- Device-only: the rendered behaviour of AC-11, AC-12, AC-13 and the rendered half of AC-2.
+
+## Earlier round — owner rulings recorded in specs 011 and 012 (stopped for approval)
 
 Applied the owner's 2026-11-18 rulings and the required changes in
 `progress/review_mwv3gmgd.md`. Still spec-only: no `src/`, `tests/` or `android/` change.

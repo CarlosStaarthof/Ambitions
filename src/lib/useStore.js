@@ -4,6 +4,7 @@ import { SEED_TASKS, SEED_CATEGORIES, SEED_QUESTIONS, normalizeModel, backfillOp
 import { mondayOf, isoDate } from "./time";
 import { NONE, PROVIDERS } from "./providers";
 import { secureGet, secureSet, secureRemove, aiKeyName } from "./secureStore";
+import { emptyReminderWall, normalizeReminderWall } from "./reminderWall";
 
 // App-wide preferences (not week data). Lives under one localForage key so new
 // settings can be added without new plumbing. `ai` drives the "any model, or none"
@@ -27,6 +28,7 @@ export function useStore() {
   const [weeks, setWeeks] = useState({});
   const [reflections, setReflections] = useState({});
   const [vision, setVision] = useState({});
+  const [reminderWall, setReminderWall] = useState(emptyReminderWall());
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [aiKeys, setAiKeys] = useState({});
   const [loading, setLoading] = useState(true);
@@ -41,13 +43,14 @@ export function useStore() {
       const w = await loadKey("weeks");
       const r = await loadKey("reflections");
       const vis = await loadKey("vision");
+      const rw = await loadKey("reminderWall");
       const s = await loadKey("settings");
 
       // Fresh install, or a store that could not be read? Decide before anything is
       // written, and hard-stop on a failed read: a partly-read store is not safe to
       // edit, because one paint would write a single-week object over the whole `weeks`
       // key. Nothing below this line runs in that state — not even the key migration.
-      const { seed, storageError: readFailed } = loadDecision({ tasks: t, categories: cat, questions: q, weeks: w, reflections: r, vision: vis, settings: s });
+      const { seed, storageError: readFailed } = loadDecision({ tasks: t, categories: cat, questions: q, weeks: w, reflections: r, vision: vis, reminderWall: rw, settings: s });
       if (readFailed) { if (mounted) { setStorageError(true); setLoading(false); } return; }
 
       // Keys written before secure storage existed sit in plaintext inside settings.
@@ -68,8 +71,8 @@ export function useStore() {
 
       if (!mounted) return;
 
-      // The one seeding branch. It fires only for a genuinely fresh install — all seven
-      // reads succeeded and all seven came back empty. An empty `tasks` on its own is
+      // The one seeding branch. It fires only for a genuinely fresh install — all eight
+      // reads succeeded and all eight came back empty. An empty `tasks` on its own is
       // NOT a fresh install: that is exactly the shape that overwrote the real task list
       // and orphaned every uid()-keyed cell.
       if (seed) {
@@ -88,6 +91,8 @@ export function useStore() {
       setWeeks(w.value || {});
       setReflections(r.value || {});
       setVision(vis.value || {});
+      // Missing or malformed wall shapes are repaired in memory, never rewritten on load.
+      setReminderWall(normalizeReminderWall(rw.value));
       setAiKeys(keys);
 
       // Merge so new default settings keys appear for existing users (and drop any
@@ -109,6 +114,7 @@ export function useStore() {
   const setWeeksP = (u) => setWeeks((prev) => { const n = typeof u === "function" ? u(prev) : u; saveKey("weeks", n); return n; });
   const setReflectionsP = (u) => setReflections((prev) => { const n = typeof u === "function" ? u(prev) : u; saveKey("reflections", n); return n; });
   const setVisionP = (u) => setVision((prev) => { const n = typeof u === "function" ? u(prev) : u; saveKey("vision", n); return n; });
+  const setReminderWallP = (u) => setReminderWall((prev) => { const n = typeof u === "function" ? u(prev) : u; saveKey("reminderWall", n); return n; });
   const setSettingsP = (u) => setSettings((prev) => {
     const n = typeof u === "function" ? u(prev) : u;
     if (n.ai && "keys" in n.ai) delete n.ai.keys;   // never let a key reach localForage
@@ -124,7 +130,7 @@ export function useStore() {
   };
 
   return {
-    loading, storageError, tasks, categories, questions, weeks, reflections, vision, settings, aiKeys,
-    setTasksP, setCategoriesP, setQuestionsP, setWeeksP, setReflectionsP, setVisionP, setSettingsP, setAiKeyP
+    loading, storageError, tasks, categories, questions, weeks, reflections, vision, reminderWall, settings, aiKeys,
+    setTasksP, setCategoriesP, setQuestionsP, setWeeksP, setReflectionsP, setVisionP, setReminderWallP, setSettingsP, setAiKeyP
   };
 }

@@ -270,20 +270,22 @@ describe("the settings merge", () => {
 describe("what this feature did not change", () => {
   const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 
-  // AC-17
-  it("leaves the export envelope at version 5 with no settings or reminders field", () => {
+  // AC-17 — feature 11 bumps the envelope for its own field; settings and the
+  // notification reminder sources still never travel in the export.
+  it("keeps the export envelope free of settings and notification reminders", () => {
     const src = read("../../src/components/DataTab.jsx");
     const payload = src.split("\n").find((l) => l.includes("const payload ="));
-    expect(payload).toMatch(/version:\s*5\b/);
+    expect(payload).toMatch(/version:\s*6\b/);
+    expect(payload).toMatch(/\breminderWall\b/);
     expect(payload).not.toMatch(/\bsettings\b/);
     expect(payload).not.toMatch(/\breminders\b/);
   });
 
-  // AC-18
-  it("reads and writes exactly the seven localForage keys that existed before", () => {
+  // AC-18 — feature 11 adds exactly one key, `reminderWall`.
+  it("reads and writes exactly the eight localForage keys, wall included", () => {
     const src = read("../../src/lib/useStore.js");
     const keys = new Set([...src.matchAll(/(?:loadKey|saveKey)\("([^"]+)"/g)].map((m) => m[1]));
-    expect([...keys].sort()).toEqual(["categories", "questions", "reflections", "settings", "tasks", "vision", "weeks"]);
+    expect([...keys].sort()).toEqual(["categories", "questions", "reflections", "reminderWall", "settings", "tasks", "vision", "weeks"]);
   });
 
   it("keeps the pure schedule module free of Capacitor and storage", () => {

@@ -1,6 +1,6 @@
 # 012 — Block notes on the Plan & Balance week grid
 
-**Feature id:** 12   **Status:** draft   **Depends on:** none (coordinates with 8 and 11
+**Feature id:** 12   **Status:** approved   **Depends on:** none (coordinates with 8 and 11
 through the shared `weeks` and export shapes; see *Out of scope* and *Open questions*)
 
 ## Purpose

@@ -1,6 +1,6 @@
 # 011 — Reminder wall: post-it reminders with their own categories
 
-**Feature id:** 11   **Status:** draft   **Depends on:** none
+**Feature id:** 11   **Status:** approved   **Depends on:** none
 
 ## Purpose
 

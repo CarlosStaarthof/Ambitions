@@ -198,12 +198,14 @@ export default function SettingsTab({ store }) {
         weeks={store.weeks}
         reflections={store.reflections}
         vision={store.vision}
+        reminderWall={store.reminderWall}
         setTasksP={store.setTasksP}
         setCategoriesP={store.setCategoriesP}
         setQuestionsP={store.setQuestionsP}
         setWeeksP={store.setWeeksP}
         setReflectionsP={store.setReflectionsP}
         setVisionP={store.setVisionP}
+        setReminderWallP={store.setReminderWallP}
       />
     </div>
   );

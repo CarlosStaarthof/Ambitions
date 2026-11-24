@@ -1,10 +1,11 @@
-import { X, CalendarRange, ListTodo, Images, Settings } from "lucide-react";
+import { X, CalendarRange, ListTodo, StickyNote, Images, Settings } from "lucide-react";
 
 // Account and Logout are deliberately absent — v1 ships account-free, and a menu
 // entry that only says "coming soon" is a dead end. Restore them with the accounts phase.
 const ITEMS = [
   { id: "plan", label: "Plan & Balance", icon: CalendarRange },
   { id: "tasks", label: "Task & Questions", icon: ListTodo },
+  { id: "reminders", label: "Reminders", icon: StickyNote },
   { id: "vision", label: "Vision Board", icon: Images },
   { id: "settings", label: "Settings", icon: Settings }
 ];

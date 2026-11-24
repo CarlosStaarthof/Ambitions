@@ -12,9 +12,10 @@ import TasksTab from "./components/TasksTab";
 import BalanceTab from "./components/BalanceTab";
 import GuidingTab from "./components/GuidingTab";
 import VisionTab from "./components/VisionTab";
+import ReminderWallTab from "./components/ReminderWallTab";
 import SettingsTab from "./components/SettingsTab";
 
-const SECTION_LABEL = { plan: "Plan & Balance", tasks: "Task & Questions", vision: "Vision Board", settings: "Settings" };
+const SECTION_LABEL = { plan: "Plan & Balance", tasks: "Task & Questions", reminders: "Reminders", vision: "Vision Board", settings: "Settings" };
 
 function SubTabs({ value, onChange, tabs }) {
   return (
@@ -32,6 +33,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [planSub, setPlanSub] = useState("week");
   const [taskSub, setTaskSub] = useState("tasks");
+  const [reminderSub, setReminderSub] = useState("wall");
   const [weekStart, setWeekStart] = useState(mondayOf(new Date()));
   const [now, setNow] = useState(new Date());
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
@@ -107,6 +109,13 @@ export default function App() {
             <SubTabs value={taskSub} onChange={setTaskSub} tabs={[["tasks", "Tasks"], ["guiding", "Questions"]]} />
             {taskSub === "tasks" && <TasksTab tasks={store.tasks} categories={store.categories} setTasksP={store.setTasksP} setCategoriesP={store.setCategoriesP} />}
             {taskSub === "guiding" && <GuidingTab questions={store.questions} setQuestionsP={store.setQuestionsP} reflections={store.reflections} setReflectionsP={store.setReflectionsP} online={online} aiEnabled={aiEnabled} ai={ai} />}
+          </>
+        )}
+
+        {section === "reminders" && (
+          <>
+            <SubTabs value={reminderSub} onChange={setReminderSub} tabs={[["wall", "Wall"], ["archive", "Archive"]]} />
+            <ReminderWallTab reminderWall={store.reminderWall} setReminderWallP={store.setReminderWallP} view={reminderSub} />
           </>
         )}
 

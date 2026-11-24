@@ -215,7 +215,7 @@ describe("loadDecision", () => {
   const ok = (value) => ({ ok: true, value });
   const reads = (over = {}) => ({
     tasks: ok(null), categories: ok(null), questions: ok(null), weeks: ok(null),
-    reflections: ok(null), vision: ok(null), settings: ok(null), ...over
+    reflections: ok(null), vision: ok(null), reminderWall: ok(null), settings: ok(null), ...over
   });
 
   // AC-30
@@ -233,6 +233,7 @@ describe("loadDecision", () => {
     expect(loadDecision(reads({ questions: ok([{ id: "g2", text: "?" }]) })).seed).toBe(false);
     expect(loadDecision(reads({ reflections: ok({ "2026-09": { g2: "yes" } }) })).seed).toBe(false);
     expect(loadDecision(reads({ vision: ok({ 2026: [] }) })).seed).toBe(false);
+    expect(loadDecision(reads({ reminderWall: ok({ categories: [{ id: "c1", name: "Home", color: "#fff" }], items: [] }) })).seed).toBe(false);
     expect(loadDecision(reads({ settings: ok({ ai: { enabled: false } }) })).seed).toBe(false);
   });
 
@@ -240,7 +241,7 @@ describe("loadDecision", () => {
   it("reports a storage error, and never seeds, when any read failed", () => {
     expect(loadDecision(reads({ weeks: { ok: false, value: null } }))).toEqual({ seed: false, storageError: true });
     expect(loadDecision(reads({ tasks: { ok: false, value: null }, weeks: ok({ "2026-09-21": { cells: {} } }) }))).toEqual({ seed: false, storageError: true });
-    for (const key of ["tasks", "categories", "questions", "weeks", "reflections", "vision", "settings"]) {
+    for (const key of ["tasks", "categories", "questions", "weeks", "reflections", "vision", "reminderWall", "settings"]) {
       const d = loadDecision(reads({ [key]: { ok: false, value: null } }));
       expect(d).toEqual({ seed: false, storageError: true });
     }
