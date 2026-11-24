@@ -5,7 +5,26 @@
 **Unblocked:** feature 8 `week-approval` (its dependencies 3 and 7 are both done), and
 features 11 / 12 once their open questions are answered.
 
-## This round — specs 011 and 012
+## This round — review fixes for specs 011 and 012
+
+Addressed all four required changes in `progress/review_mwv2i4pq.md` (no implementation):
+
+- 011 AC-9 / contract: `markDone` is idempotent — a second call returns the wall unchanged
+  with `error: undefined`, never `reminder-archived`; `reminder-archived` now covers edit
+  only.
+- 011: added `category-missing` to AC-5/AC-6, `reminder-not-found` to AC-8/AC-9; AC-5 states
+  a case-only rename of a category's own name is allowed (duplicate check excludes itself).
+- 012 AC-5/AC-6: added a failing `voice-invalid` case (audio without `mime` or a `data:` URL);
+  Verification now splits AC-8 into the pure `validateNote` half (Vitest) and the recorder
+  auto-stop half (device).
+- 012 AC-9 + UI states: long-press notes only when no brush/eraser is selected (paint still
+  starts at touch-down with a brush), and the grid sets `touch-action: none` so a note drag
+  never scrolls the `overflow-auto` container. Added as open question 5 (chosen default).
+- Also deleted the stray 011 A1 self-reference flagged as observation 2.
+
+Gate: `npm test --silent` → 5 files, 140 tests passed.
+
+## Earlier round — specs 011 and 012
 
 Wrote two specs, no implementation:
 

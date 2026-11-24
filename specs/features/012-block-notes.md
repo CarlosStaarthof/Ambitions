@@ -217,6 +217,10 @@ Feature 8 owns any change to how `approved` or a snapshot merges.
 - **Success:** a saved note shows a small marker at the start of its range. Long-pressing any
   cell in the range opens the viewer; text is shown and a play control appears only when
   audio exists; playback never autoplays and stops when the viewer closes.
+- **Gesture vs brush:** with a paint brush or eraser selected, touch paints at touch-down as
+  today and the note gesture does not fire; with no brush selected, the ~500 ms long-press
+  and drag select a note range. The grid uses `touch-action: none` so a note drag never
+  scrolls the `overflow-auto` container.
 - **Clear week:** the armed action clears `cells` only and leaves every note marker in place;
   its copy says notes are kept.
 - **AI disabled:** no AI surface, no provider call, no key read. Every behaviour above is
@@ -243,24 +247,31 @@ Feature 8 owns any change to how `approved` or a snapshot merges.
    returns the first in array order.
 5. AC-5: `addNote` trims text and omits an empty text field, returns `empty-note` when there
    is neither text nor audio, returns `range-invalid` outside `0…336` or when
-   `start >= end`, stores the supplied `createdAt`/`updatedAt`, and returns new arrays and
+   `start >= end`, returns `voice-invalid` when `audio` has no `mime` or its `dataUrl` is not
+   a `data:` URL, stores the supplied `createdAt`/`updatedAt`, and returns new arrays and
    objects without mutating its inputs.
 6. AC-6: `updateNote` changes text and/or audio, can remove the audio by supplying
-   `audio: null`, rejects a result with neither text nor audio with `empty-note`, rejects a
-   range overlapping another note with `overlap`, sets `updatedAt` to the supplied `at`,
-   preserves `id`, `start`, `end` and `createdAt`, and returns `note-not-found` for an
-   unknown id.
+   `audio: null`, rejects a result with neither text nor audio with `empty-note`, rejects an
+   invalid clip with `voice-invalid`, rejects a range overlapping another note with `overlap`,
+   sets `updatedAt` to the supplied `at`, preserves `id`, `start`, `end` and `createdAt`, and
+   returns `note-not-found` for an unknown id.
 7. AC-7: `removeNote(notes, id)` returns a new array without that note, leaves every other
    note deep-equal, does not mutate its input, and returns an array deep-equal to the input
    for an unknown id.
 8. AC-8: `MAX_VOICE_MS` is 120000; `validateNote` accepts `durationMs` exactly 120000 and
    rejects a greater value with `voice-too-long`, and the recorder auto-stops at
-   `MAX_VOICE_MS` so a recording made through the UI can never be longer.
+   `MAX_VOICE_MS` so a recording made through the UI can never be longer. (Pure for the
+   `validateNote`/`MAX_VOICE_MS` half; Device for the recorder auto-stop.)
 9. AC-9: A ~500 ms long-press on a filled cell selects the whole block under the finger and
    opens the editor if that range has no note; dragging without lifting over further
    adjacent blocks extends the selection to the whole contiguous range and opens one editor
    on release. Releasing over an empty or non-adjacent cell shows one line and opens no
-   editor. The long-press changes no cell and a short tap paints exactly as before. (Device.)
+   editor. The long-press note gesture is available only when no paint brush or eraser is
+   selected: with a brush selected, touch paints at touch-down exactly as today and no note
+   gesture fires, so no note gesture ever changes a cell. A short tap with a brush selected
+   paints exactly as before. During a long-press drag the grid must not scroll — the gesture
+   uses `touch-action: none` and calls `preventDefault`, so the `overflow-auto` container
+   stays put under the finger. (Device.)
 10. AC-10: Long-pressing any cell in a range that already has a note opens the viewer, not a
     second editor. The viewer shows the text, shows a play control only when audio exists,
     never autoplays, stops playback on close, and shows a marker at the range start even when
@@ -293,16 +304,18 @@ Feature 8 owns any change to how `approved` or a snapshot merges.
 
 **Vitest can prove** (new `tests/unit/notes.test.js`, additions to
 `tests/unit/seed.test.js`, and the export assertion in `tests/unit/reminders.test.js`):
-AC-2 to AC-8, AC-12 (version/source half), AC-13 and the source half of AC-14. These are
-pure functions of supplied cells, notes and timestamps; none reads a real clock or the DOM.
+AC-2 to AC-7, the `validateNote`/`MAX_VOICE_MS` half of AC-8, AC-12 (version/source half),
+AC-13 and the source half of AC-14. These are pure functions of supplied cells, notes and
+timestamps; none reads a real clock or the DOM.
 
 **A source-reading test can prove:** AC-1 (no new key, no `taskId` in the note writer),
 AC-12 (the envelope version and field list), AC-14 (the `{ ...wk, cells: {} }` write) and
 the manifest/MainActivity half of AC-15.
 
-**Only the device can confirm:** AC-9, AC-10, AC-11, the marker and empty-cell half of
-AC-14, and the recording/permission half of AC-15. This repo has no component or
-instrumentation tests; saying otherwise would be a false coverage claim.
+**Only the device can confirm:** AC-9, AC-10, AC-11, the recorder auto-stop half of AC-8,
+the marker and empty-cell half of AC-14, and the recording/permission half of AC-15. This
+repo has no component or instrumentation tests; saying otherwise would be a false coverage
+claim.
 
 ## Out of scope
 
@@ -335,3 +348,8 @@ instrumentation tests; saying otherwise would be a false coverage claim.
 4. **32 kbps mono is the chosen compression.** Is that quality acceptable given that voice
    notes travel inside the JSON backup and can grow an export by roughly 0.6 MB per
    two-minute note?
+5. **Long-press notes only when no brush is selected (chosen).** Painting starts at
+   touch-down when a brush is active, so one touch cannot both paint and start a note.
+   Should note gestures require the brush to be deselected, or should painting instead wait
+   for release? The alternative — the first touch paints and a long-press undoes it — is not
+   chosen because it can visibly flash a painted cell.

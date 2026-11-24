@@ -15,10 +15,9 @@ a wall reminder is captured context, not a calendar commitment and not a schedul
 
 ### A1. A new top-level section, not another Plan/Balance sub-tab.
 
-The menu gains one item, **Reminders**, with two sub-tabs: **Wall** and **Archive**
-(`specs/features/011-reminder-wall.md` is the whole feature). It is not folded into
-Tasks or Plan & Balance. Tradeoff: one more menu entry, but the wall stays reachable in
-one tap and does not compete with the finite-week views.
+The menu gains one item, **Reminders**, with two sub-tabs: **Wall** and **Archive**.
+It is not folded into Tasks or Plan & Balance. Tradeoff: one more menu entry, but the wall
+stays reachable in one tap and does not compete with the finite-week views.
 
 ### A2. Its own store, its own categories.
 
@@ -157,11 +156,13 @@ mergeImportedReminderWall(stored, imported) → wall
 - `category-not-empty` — trying to delete `uncategorized` while it still holds items.
 - `text-empty` — reminder text is empty after trimming.
 - `reminder-not-found` — the reminder id is not in the wall.
-- `reminder-archived` — trying to edit or re-tick a reminder that already has `doneAt`.
+- `reminder-archived` — trying to **edit** a reminder that already has `doneAt`. It does not
+  cover ticking it done again; see `markDone` below.
 
 `deleteCategory` moves every item of a non-`uncategorized` category to
 `UNCATEGORIZED_ID` (creating it if absent) and then removes the category. It never drops an
-item. `markDone` is idempotent: a second call on an already-done reminder changes nothing.
+item. `markDone` is idempotent: a second call on an already-done reminder returns the wall
+unchanged with `error: undefined`, and never `reminder-archived`.
 
 ### `src/lib/seed.js`
 
@@ -229,24 +230,30 @@ reflections, vision, reminderWall }`. Import persists
    case-insensitive duplicate with `name-duplicate`, assigns the first palette colour not
    already used by a category, keeps the supplied id, returns a new wall, and does not
    mutate the input wall or its categories.
-5. AC-5: `renameCategory` applies the same trimming and the same two errors, preserves the
-   category's id and colour and every item's `categoryId`, and is a no-op only when the new
-   name equals the old name after trimming.
+5. AC-5: `renameCategory` applies the same trimming and returns `name-empty` or
+   `name-duplicate` for an empty name or a duplicate. The duplicate check excludes the
+   category being renamed, so renaming a category to a different-case version of its own
+   name (e.g. `work` → `Work`) is accepted and applied. An unknown id returns
+   `category-missing` and changes nothing. On success it preserves the category's id and
+   colour and every item's `categoryId`, and is a no-op only when the new name equals the old
+   name exactly after trimming.
 6. AC-6: `deleteCategory` on a user category reassigns every item that references it —
    active and archived — to `uncategorized`, creates that category if absent, then removes
    the category, leaving the item count unchanged. Deleting `uncategorized` while it holds
    any item returns `category-not-empty` and changes nothing. Deleting an empty category
-   removes only that category.
+   removes only that category. An unknown id returns `category-missing` and changes nothing.
 7. AC-7: `addReminder` trims the text, rejects empty text with `text-empty` and an unknown
    category with `category-missing`, stores `createdAt` and `updatedAt` equal to the
    supplied `at`, stores no `doneAt`, returns a new wall, and does not mutate its input.
 8. AC-8: `editReminder` can change text and category, rejects empty text with `text-empty`,
-   an unknown category with `category-missing` and an archived reminder with
-   `reminder-archived`, sets `updatedAt` to the supplied `at`, and preserves the id,
-   `createdAt` and `doneAt`.
+   an unknown category with `category-missing`, an unknown reminder id with
+   `reminder-not-found` and an archived reminder with `reminder-archived`, sets `updatedAt`
+   to the supplied `at`, and preserves the id, `createdAt` and `doneAt`.
 9. AC-9: `markDone` sets `doneAt` and `updatedAt` to the supplied `at`, leaves every other
-   field unchanged, and is idempotent — a second call on the same reminder changes nothing.
-   The reminder then appears in `archivedReminders` and not in `activeReminders`.
+   field unchanged, and returns `reminder-not-found` for an unknown id. It is idempotent: a
+   second call on an already-done reminder returns the wall unchanged with `error: undefined`
+   (never `reminder-archived`), so a test asserts exactly that outcome. The reminder then
+   appears in `archivedReminders` and not in `activeReminders`.
 10. AC-10: `activeReminders` returns only items with no `doneAt`, newest `createdAt` first;
     `archivedReminders` returns only items with `doneAt`, newest `doneAt` first; both
     preserve array order for equal timestamps and return new arrays. `categoryUsage` counts
