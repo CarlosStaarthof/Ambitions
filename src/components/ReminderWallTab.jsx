@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { Check, Pencil, Plus, X } from "lucide-react";
+import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
 import { uid } from "../lib/time";
 import { card, inputCls, selectCls, btnPrimary, btnGhost } from "../lib/ui";
 import { useArmed } from "../lib/useArmed";
 import {
   UNCATEGORIZED_ID, UNCATEGORIZED_COLOR,
   activeReminders, archivedReminders, categoryUsage,
-  addCategory, renameCategory, deleteCategory, addReminder, editReminder, markDone
+  addCategory, renameCategory, deleteCategory, addReminder, editReminder, markDone,
+  deleteReminder
 } from "../lib/reminderWall";
 
 const COPY = {
@@ -39,6 +40,7 @@ export default function ReminderWallTab({ reminderWall, setReminderWallP, view =
   const [editText, setEditText] = useState("");
   const [editCatId, setEditCatId] = useState("");
   const [editError, setEditError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
 
   const categories = reminderWall.categories;
   const active = activeReminders(reminderWall.items);
@@ -98,16 +100,28 @@ export default function ReminderWallTab({ reminderWall, setReminderWallP, view =
     if (editingId === id) setEditingId(null);
   }
 
+  // Permanent delete, from the wall or the archive. The armed click is the
+  // confirmation step; no reminder is ever written back to another list.
+  function removeItem(id) {
+    const r = deleteReminder(reminderWall, id);
+    if (r.error) { setDeleteError(r.error); return; }
+    setReminderWallP(r.wall);
+    setDeleteError("");
+    if (editingId === id) setEditingId(null);
+  }
+
   const uncategorizedUsage = categoryUsage(reminderWall, UNCATEGORIZED_ID);
 
   if (view === "archive") {
     return (
       <div className="space-y-3">
+        {deleteError && <p className="text-[11px] text-red-400">{COPY[deleteError]}</p>}
         {archived.length === 0 ? (
           <div className={card + " p-6 text-center text-sm text-zinc-500"}>Nothing archived yet.</div>
         ) : (
           archived.map((it) => {
             const cat = categoryOf(it.categoryId);
+            const armed = isArmed("rmDel" + it.id);
             return (
               <div key={it.id} className={card + " p-3 space-y-2"} style={{ borderColor: cat.color }}>
                 <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500">
@@ -118,6 +132,14 @@ export default function ReminderWallTab({ reminderWall, setReminderWallP, view =
                   <span className="shrink-0">{doneLabel(it.doneAt)}</span>
                 </div>
                 <p className="text-sm text-zinc-300 whitespace-pre-wrap break-words">{it.text}</p>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => arm("rmDel" + it.id, () => removeItem(it.id))}
+                    className={"inline-flex items-center gap-1 text-xs px-2 py-1 rounded " + (armed ? "bg-red-600 text-white" : "text-red-400 hover:bg-zinc-800")}
+                  >
+                    <Trash2 size={13} /> {armed ? "tap to confirm" : "Delete"}
+                  </button>
+                </div>
               </div>
             );
           })
@@ -128,6 +150,7 @@ export default function ReminderWallTab({ reminderWall, setReminderWallP, view =
 
   return (
     <div className="space-y-3">
+      {deleteError && <p className="text-[11px] text-red-400">{COPY[deleteError]}</p>}
       <div className={card + " p-3 space-y-3"}>
         <div className="text-sm font-medium">Reminder categories</div>
         {categories.length === 0 && (
@@ -217,6 +240,7 @@ export default function ReminderWallTab({ reminderWall, setReminderWallP, view =
             <div className="grid gap-2 sm:grid-cols-2">
               {shown.map((it) => {
                 const cat = categoryOf(it.categoryId);
+                const armed = isArmed("rmDel" + it.id);
                 return (
                   <div key={it.id} className="rounded-xl border p-3 space-y-2" style={{ borderColor: cat.color, background: tint(cat.color) }}>
                     <div className="flex items-center gap-1.5 text-[11px] min-w-0" style={{ color: cat.color }}>
@@ -247,6 +271,14 @@ export default function ReminderWallTab({ reminderWall, setReminderWallP, view =
                         <div className="flex items-center justify-end gap-1">
                           <button onClick={() => startEdit(it)} aria-label="Edit reminder" title="Edit reminder" className="p-1.5 rounded text-zinc-400 hover:bg-zinc-800"><Pencil size={14} /></button>
                           <button onClick={() => tickDone(it.id)} aria-label="Mark reminder done" className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 inline-flex items-center gap-1"><Check size={13} /> Done</button>
+                          <button
+                            onClick={() => arm("rmDel" + it.id, () => removeItem(it.id))}
+                            aria-label="Delete reminder"
+                            title="Delete reminder permanently"
+                            className={"inline-flex items-center gap-1 text-xs px-2 py-1 rounded " + (armed ? "bg-red-600 text-white" : "text-red-400 hover:bg-zinc-800")}
+                          >
+                            <Trash2 size={13} /> {armed ? "tap to confirm" : "Delete"}
+                          </button>
                         </div>
                       </>
                     )}

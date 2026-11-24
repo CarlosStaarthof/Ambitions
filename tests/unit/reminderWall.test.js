@@ -4,7 +4,7 @@ import {
   UNCATEGORIZED_ID, UNCATEGORIZED_COLOR,
   emptyReminderWall, normalizeReminderWall, activeReminders, archivedReminders, categoryUsage,
   addCategory, renameCategory, deleteCategory, addReminder, editReminder, markDone,
-  mergeImportedReminderWall
+  deleteReminder, mergeImportedReminderWall
 } from "../../src/lib/reminderWall.js";
 import { PALETTE } from "../../src/lib/seed.js";
 
@@ -201,6 +201,45 @@ describe("reminder CRUD", () => {
     expect(markDone(input, "nope", LATER).error).toBe("reminder-not-found");
   });
 
+  // AC-16 — permanent delete, active and archived, with categories untouched.
+  it("permanently deletes an active or archived reminder and leaves categories alone", () => {
+    const input = wallOf(
+      [CAT("home", "Home"), CAT("work", "Work")],
+      [
+        ITEM("active", "home", "delete me"),
+        ITEM("keep", "home", "keep me"),
+        ITEM("archived", "work", "delete me too", { doneAt: LATER })
+      ]
+    );
+    const before = clone(input);
+
+    const first = deleteReminder(input, "active");
+    expect(first.error).toBeUndefined();
+    expect(first.wall.items.map((i) => i.id)).toEqual(["keep", "archived"]);
+    expect(first.wall.categories).toEqual(input.categories);
+    expect(activeReminders(first.wall.items).some((i) => i.id === "active")).toBe(false);
+    expect(input).toEqual(before);
+
+    const second = deleteReminder(first.wall, "archived");
+    expect(second.error).toBeUndefined();
+    expect(second.wall.items.map((i) => i.id)).toEqual(["keep"]);
+    expect(archivedReminders(second.wall.items)).toEqual([]);
+    expect(second.wall.categories).toEqual(input.categories);
+    expect(categoryUsage(second.wall, "work")).toBe(0);
+    expect(input).toEqual(before);
+
+    expect(deleteReminder(input, "nope")).toEqual({ wall: input, error: "reminder-not-found" });
+  });
+
+  // AC-16 — a deleted reminder cannot survive into an export built from the wall.
+  it("leaves no trace of a deleted reminder in a wall export", () => {
+    const input = wallOf([CAT("home", "Home")], [ITEM("gone", "home", "gone"), ITEM("stay", "home", "stay")]);
+    const { wall } = deleteReminder(input, "gone");
+    const envelope = JSON.parse(JSON.stringify({ version: 6, reminderWall: wall }));
+    expect(envelope.reminderWall.items.map((i) => i.id)).toEqual(["stay"]);
+    expect(JSON.stringify(envelope)).not.toContain("gone");
+  });
+
   // AC-10
   it("sorts active and archived lists newest first, stable for equal timestamps", () => {
     const items = [
@@ -287,6 +326,17 @@ describe("structural guarantees (source-read)", () => {
     expect(view).not.toMatch(/setTasksP|setWeeksP|setCategoriesP|setSettingsP/);
     expect(view).not.toMatch(/callAI|aiEnabled|aiErrorText|lib\/ai|notify|@capacitor|fetch\(/);
     expect(view).toMatch(/useArmed/);
+    expect(view).not.toMatch(/window\.confirm/);
+  });
+
+  // AC-16 — permanent delete is offered from the wall and from the archive,
+  // always behind the two-tap confirmation pattern.
+  it("arms a permanent delete control on both the wall and the archive", () => {
+    const view = read("../../src/components/ReminderWallTab.jsx");
+    expect(view).toMatch(/import\s*\{[^}]*deleteReminder[^}]*\}\s*from\s*"\.\.\/lib\/reminderWall"/s);
+    expect(view).toMatch(/deleteReminder\(reminderWall, id\)/);
+    expect(view.match(/arm\("rmDel" \+ it\.id/g) || []).toHaveLength(2);
+    expect(view).toMatch(/Trash2/);
     expect(view).not.toMatch(/window\.confirm/);
   });
 

@@ -31,6 +31,10 @@ const rangeLabel = (start, end) => {
   return `${DAYS[day]} ${slotLabel(from)}–${endLabel(to)}`;
 };
 
+// A finger that moves this far before the hold time is scrolling, not holding,
+// so the gesture is cancelled and the grid scrolls normally.
+const HOLD_CANCEL_PX = 8;
+
 // Live clock for the grid highlights. 30s is plenty — a slot is 30 minutes, and
 // re-rendering 336 cells every second would be wasteful.
 function useNow(intervalMs = 30000) {
@@ -46,14 +50,24 @@ export default function WeekTab({ tasks, categories, weeks, settings, ai, aiEnab
   const [openName, setOpenName] = useState("");
   const [noteDlg, setNoteDlg] = useState(null);
   const [noteMsg, setNoteMsg] = useState("");
+  const [scrollLocked, setScrollLocked] = useState(false);
   const paintingRef = useRef(false);
   const holdRef = useRef(null);
+  const holdStart = useRef(null);
   const { arm, isArmed } = useArmed();
   const now = useNow();
   const holdMs = clampLongPressMs(settings && settings.longPressMs);
   const canDictate = dictationSupported();
 
   useEffect(() => { const up = () => { paintingRef.current = false; }; window.addEventListener("mouseup", up); return () => window.removeEventListener("mouseup", up); }, []);
+  // Release the hold lock however the touch ends, including when the editor
+  // overlay takes the pointerup that the cell itself would have received.
+  useEffect(() => {
+    const end = () => clearHold();
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+    return () => { window.removeEventListener("pointerup", end); window.removeEventListener("pointercancel", end); };
+  }, []);
   useEffect(() => () => clearHold(), []);
   useEffect(() => { if (brush != null) clearHold(); }, [brush]);
 
@@ -109,6 +123,8 @@ export default function WeekTab({ tasks, categories, weeks, settings, ai, aiEnab
 
   function clearHold() {
     if (holdRef.current) { clearTimeout(holdRef.current); holdRef.current = null; }
+    holdStart.current = null;
+    setScrollLocked(false);
   }
 
   // Notes are a sibling field of `cells`, so every write keeps the rest of the week —
@@ -142,13 +158,25 @@ export default function WeekTab({ tasks, categories, weeks, settings, ai, aiEnab
   function handleCellPointerDown(d, s, e) {
     // A brush or the eraser owns touch-down: painting is unchanged and no note fires.
     if (brush != null || noteDlg) return;
-    e.preventDefault();
     clearHold();
     const index = d * SLOTS + s;
+    holdStart.current = { x: e.clientX, y: e.clientY };
     holdRef.current = setTimeout(() => {
       holdRef.current = null;
+      holdStart.current = null;
+      // The hold is real: pause scrolling until the finger lifts or cancels.
+      setScrollLocked(true);
       openNoteAt(index);
     }, holdMs);
+  }
+
+  // Moving before the hold completes means the user is scrolling, so cancel
+  // the note gesture and leave the grid fully scrollable.
+  function handleCellPointerMove(e) {
+    if (!holdStart.current) return;
+    const dx = e.clientX - holdStart.current.x;
+    const dy = e.clientY - holdStart.current.y;
+    if (Math.hypot(dx, dy) > HOLD_CANCEL_PX) clearHold();
   }
 
   function closeNote() {
@@ -223,7 +251,7 @@ export default function WeekTab({ tasks, categories, weeks, settings, ai, aiEnab
       {noteMsg && <div className="text-xs text-amber-300">{noteMsg}</div>}
 
       <div className="border border-zinc-800 rounded-xl bg-zinc-900 overflow-auto" style={{ maxHeight: "58vh", userSelect: "none" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "44px repeat(7, 1fr)", touchAction: "none" }} onContextMenu={(e) => e.preventDefault()}>
+        <div style={{ display: "grid", gridTemplateColumns: "44px repeat(7, 1fr)", touchAction: scrollLocked ? "none" : "pan-y" }} onContextMenu={(e) => e.preventDefault()}>
           {/* The header's corner box doubles as the Erase toggle — it's sticky, so it
               stays reachable no matter how far down the grid you've scrolled. */}
           <button onClick={() => setBrush(brush === "erase" ? null : "erase")} aria-label="Erase" title="Erase"
@@ -271,6 +299,7 @@ export default function WeekTab({ tasks, categories, weeks, settings, ai, aiEnab
                       onMouseEnter={() => { if (paintingRef.current) applyBrush(d, s); }}
                       onClick={() => applyBrush(d, s)}
                       onPointerDown={(e) => handleCellPointerDown(d, s, e)}
+                      onPointerMove={handleCellPointerMove}
                       onPointerUp={clearHold}
                       onPointerCancel={clearHold}
                       onPointerLeave={clearHold}

@@ -258,8 +258,10 @@ install that lacks it. `SettingsTab` changes it by ±500 ms. No new localForage 
 - **Gesture vs brush:** with a paint brush or eraser selected, touch paints at touch-down as
   today and the note gesture does not fire; with no brush selected, holding a filled cell for
   `settings.longPressMs` (default 500 ms) selects its whole same-category run for that day
-  and opens the editor. There is no drag extension. The grid uses `touch-action: none` and
-  calls `preventDefault` so the hold never scrolls the `overflow-auto` container.
+  and opens the editor. There is no drag extension. The grid allows vertical panning
+  (`touch-action: pan-y`); a finger that moves before the hold completes cancels the gesture
+  and scrolls normally, and scrolling is paused only while a recognised hold is in progress.
+  (Owner ruling, 2026-11-24.)
 - **Dictation:** the microphone fills the text field with the cleaned transcript; the user
   edits it and saves. No audio is kept.
 - **AI polish:** the polish control appears only when AI is on and a user key is stored; the
@@ -313,9 +315,11 @@ install that lacks it. `SettingsTab` changes it by ±500 ms. No new localForage 
 9. AC-9: The note gesture is available only when no paint brush or eraser is selected: with a
    brush selected touch paints at touch-down exactly as today and no note gesture fires; a
    short tap with a brush selected paints exactly as before; no note gesture ever changes a
-   cell. During the hold the grid must not scroll — the gesture uses `touch-action: none` and
-   calls `preventDefault`, so the `overflow-auto` container stays put under the finger.
-   (Device.)
+   cell. The week grid scrolls vertically normally and never sets `touch-action: none`
+   unconditionally. Scrolling is paused only while a recognised long-press hold is in
+   progress, and the lock is released when the finger lifts or the hold is cancelled; a
+   finger that moves before the hold time cancels the gesture and scrolls the grid.
+   (Device for the feel; source for the scroll-lock state.)
 10. AC-10: Long-pressing any cell in a range that already has a note opens the viewer, not a
     second editor. The viewer shows the text, has no audio or play control, and shows a
     marker at the range start even when those cells are empty. (Device.)
@@ -357,7 +361,9 @@ AC-14 and the source half of AC-15. These are pure functions of supplied cells, 
 text and timestamps; none reads a real clock or the DOM.
 
 **A source-reading test can prove:** AC-1 (no new key, no `taskId`, no `audio` in the note
-writer), AC-12 (the envelope version, field list and absence of a key field), AC-14 (the
+writer), AC-9 (the grid allows vertical panning, the scroll-lock state is set on a recognised
+hold and cleared on lift/cancel, and a pre-hold move cancels rather than hijacks scrolling),
+AC-12 (the envelope version, field list and absence of a key field), AC-14 (the
 `{ ...wk, cells: {} }` write) and the manifest/MainActivity half of AC-15.
 
 **Only the device can confirm:** AC-8, AC-9, AC-10, AC-11, the marker and empty-cell half of
@@ -427,3 +433,12 @@ These rulings override the earlier goal text and any conflicting sentence above.
    `range-invalid`, `empty-note`, `overlap`, `note-not-found`.
 4. **Reading notes back in the user's own voice is a future feature, out of scope.** It is
    listed under *Out of scope* and is not implemented by this feature.
+
+## Owner ruling, 2026-11-24 — grid scrolling
+
+The Plan & Balance week calendar must scroll vertically normally on the phone. Scrolling may
+only be paused while a long-press hold on a block is actually in progress, and must resume
+when the finger lifts or the hold is cancelled. The grid must not disable touch scrolling
+with an unconditional `touch-action: none`. This supersedes the earlier touch-action wording
+in *UI states — Gesture vs brush* and AC-9; the implementation applies the lock only while a
+recognised hold is active and cancels the gesture when the finger moves first.

@@ -204,6 +204,19 @@ export function markDone(wall, id, at) {
   return { wall: { categories: w.categories, items: w.items }, error: undefined };
 }
 
+// Permanent: the reminder is gone, active or archived. Categories are left
+// untouched, including an empty one that losing its last reminder created.
+export function deleteReminder(wall, id) {
+  const w = cloneWall(wall);
+  const index = w.items.findIndex((it) => it.id === id);
+  if (index === -1) return { wall: w, error: "reminder-not-found" };
+
+  return {
+    wall: { categories: w.categories, items: w.items.filter((_, i) => i !== index) },
+    error: undefined
+  };
+}
+
 // Import is a merge, never a replace: a file that omits the wall (or part of it)
 // must not erase what is stored. The file wins a shared id, then the shape is
 // repaired. Idempotent and non-mutating.

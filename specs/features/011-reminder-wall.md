@@ -38,12 +38,15 @@ takes the colour of its category; colours are assigned from the existing palette
 category is created and stay stable on rename. Tradeoff: less visual freedom, much less
 UI and no colour picker.
 
-### A5. Done is a one-tap move to a read-only archive.
+### A5. Done is a one-tap move to an archive; deletion is separate and permanent.
 
 Ticking a reminder sets `doneAt` and removes it from the wall immediately. The archive is
-viewable but read-only: no untick, edit or delete in this feature. Tradeoff: an accidental
-tick has no in-app undo yet. The archive is kept because the owner asked for done reminders
-to be kept.
+viewable and has no untick or edit control. A reminder — active or archived — can instead be
+**permanently deleted** after a two-tap confirmation; deletion removes it from the wall
+entirely, so it is never archived and never exported again. Tradeoff: an accidental tick has
+no in-app undo, and a deleted reminder cannot be restored; both are deliberate. (Owner
+ruling, 2026-11-24.) The archive is kept because the owner asked for done reminders to be
+kept.
 
 ### A6. Deleting a category moves its reminders to `Uncategorized`; nothing is orphaned.
 
@@ -80,6 +83,8 @@ post-it, not a buzz at a time.
   finished.
 - As a user, I can open the archive and see every reminder I ticked done, with its category
   and the date it was archived.
+- As a user, I can permanently delete a reminder from the wall or the archive after a
+  confirmation step, without changing any category.
 - As a user, I can delete or rename a category without any reminder losing its category.
 - As a user, restoring my JSON backup restores my wall, categories included.
 
@@ -142,6 +147,9 @@ deleteCategory(wall, id) → { wall, error }
 addReminder(wall, { id, categoryId, text, at }) → { wall, error }
 editReminder(wall, id, { categoryId, text, at }) → { wall, error }
 markDone(wall, id, at) → { wall, error }
+deleteReminder(wall, id) → { wall, error }
+// Permanently removes the item by id, active or archived. Categories are untouched,
+// including one left empty by the deletion. Unknown id → reminder-not-found.
 
 mergeImportedReminderWall(stored, imported) → wall
 // File wins a shared category/item id; stored entries the file omits are kept; then
@@ -155,7 +163,7 @@ mergeImportedReminderWall(stored, imported) → wall
 - `category-missing` — the id is not in the wall.
 - `category-not-empty` — trying to delete `uncategorized` while it still holds items.
 - `text-empty` — reminder text is empty after trimming.
-- `reminder-not-found` — the reminder id is not in the wall.
+- `reminder-not-found` — the reminder id is not in the wall (edit, mark done or delete).
 - `reminder-archived` — trying to **edit** a reminder that already has `doneAt`. It does not
   cover ticking it done again; see `markDone` below.
 
@@ -204,7 +212,9 @@ reflections, vision, reminderWall }`. Import persists
   one line beside the field, using the error-code copy; no alert, no `window.confirm`.
 - **Success:** new reminders appear on the wall under their category, coloured by it. Tick
   done removes the post-it and adds it to Archive with its category and done date. Editing
-  updates the post-it in place.
+  updates the post-it in place. Delete is a two-tap `useArmed` action available on a wall
+  post-it and on an archive entry; confirming removes the reminder entirely and no category
+  changes.
 - **Category management:** add, rename, and delete in one card. Delete is armed with
   `useArmed`; its copy says how many reminders will move to Uncategorized. Deleting
   Uncategorized while it holds reminders is disabled with a one-line reason.
@@ -280,25 +290,36 @@ reflections, vision, reminderWall }`. Import persists
     AI-gated control; with AI off — `enabled: false` or `provider: "none"` — every wall
     behaviour is identical. No wall action schedules or cancels a notification, and the
     existing reminder sources in Settings behave exactly as before.
+16. AC-16: `deleteReminder` permanently removes an active or archived reminder by id: it
+    returns a new wall without that item, leaves every category and every other item
+    deep-equal, does not mutate its input, and returns `reminder-not-found` for an unknown
+    id. The deleted reminder appears in neither `activeReminders` nor `archivedReminders`,
+    does not count in `categoryUsage`, and is absent from the `reminderWall` written in a
+    later export. Deleting a reminder never changes a category, including leaving a
+    category empty. The wall and the archive each offer the delete control as a two-tap
+    `useArmed` action, with no `window.confirm`.
 
 ## Verification
 
 **Vitest can prove** (new `tests/unit/reminderWall.test.js`, plus the key-pin and export
 assertions in `tests/unit/reminders.test.js` and `tests/unit/seed.test.js`): AC-1 (source
-half), AC-3 to AC-10, AC-14 (merge half), and the independence half of AC-2. Every
-transform is a pure function of a supplied wall and `at`, so none waits for a real clock.
+half), AC-3 to AC-10, AC-14 (merge half), AC-16 (the pure delete and export-absence cases),
+and the independence half of AC-2. Every transform is a pure function of a supplied wall and
+`at`, so none waits for a real clock.
 
 **A source-reading test can prove:** AC-1 (the eight-key set), AC-2 (no `tasks`/`weeks`/
-`settings` writers in the wall module or component), AC-14 (the envelope version and field)
-and AC-15 (no `callAI`, no network, no notification call from the wall).
+`settings` writers in the wall module or component), AC-14 (the envelope version and field),
+AC-15 (no `callAI`, no network, no notification call from the wall) and the control half of
+AC-16 (delete armed in both views, no `window.confirm`).
 
-**Only the device can confirm:** AC-11, AC-12, AC-13 and the rendered half of AC-2. This
-repo has no component tests; claiming otherwise would be a false coverage claim.
+**Only the device can confirm:** AC-11, AC-12, AC-13, the rendered delete/confirmation half
+of AC-16, and the rendered half of AC-2. This repo has no component tests; claiming
+otherwise would be a false coverage claim.
 
 ## Out of scope
 
-- **Un-ticking / restoring an archived reminder, and deleting reminders.** The task asked
-  for create, edit and tick done; the archive is read-only here.
+- **Un-ticking / restoring an archived reminder.** Deletion is now in scope (owner ruling,
+  2026-11-24) but undoing a tick or a deletion is not.
 - **Notifications, due dates, repeat rules, priorities, tags, search or manual reordering.**
   The wall is a visual post-it board, not a scheduler.
 - **Per-reminder colours or a colour picker.** A reminder takes its category's colour.
@@ -311,16 +332,17 @@ repo has no component tests; claiming otherwise would be a false coverage claim.
 
 ## Open questions
 
-1. **Archive is read-only (chosen).** Should an archived reminder be restorable with one
-   control? If yes, the spec gains an untick action and one AC; if no, an accidental tick is
-   permanent.
+1. **Archive has no untick or edit (chosen); delete is separate (AC-16).** Should an
+   archived reminder be restorable with one control? If yes, the spec gains an untick action
+   and one AC; if no, an accidental tick is permanent unless the reminder is deleted.
 2. **The wall is in the JSON backup (chosen, AC-14).** If you intended it to be
    device-scoped like notification preferences, say so and AC-14 is removed.
 3. **Deleting a category moves its reminders to Uncategorized (chosen).** The alternative
    is refusing deletion until every reminder is gone, which the permanent archive makes
    impossible.
-4. **No reminder deletion (chosen).** Should a reminder that was created by mistake be
-   deletable instead of only ticked done?
+4. **Reminder deletion (answered 2026-11-24).** A reminder created by mistake is deletable
+   from the wall and from the archive after a confirmation step, permanently. See AC-16 and
+   the owner ruling below.
 5. **No notifications are attached to wall reminders (chosen).** Should a wall reminder
    ever schedule an alert, or does "reminder" here mean only the visible post-it?
 
@@ -332,7 +354,7 @@ concern block notes (spec 012) and leave this wall unchanged.
 1. **The error list and the acceptance criteria agree.** Every error code in the Contract has
    at least one acceptance criterion that triggers it. `name-empty` and `name-duplicate` are
    covered by AC-4 and AC-5; `category-missing` by AC-5, AC-6 and AC-7; `category-not-empty`
-   by AC-6; `text-empty` by AC-7 and AC-8; `reminder-not-found` by AC-8 and AC-9; and
+   by AC-6; `text-empty` by AC-7 and AC-8; `reminder-not-found` by AC-8, AC-9 and AC-16; and
    `reminder-archived` by AC-8.
 2. **Long-press hold time and same-category run selection** applies to block notes only and
    does not change this spec.
@@ -340,3 +362,11 @@ concern block notes (spec 012) and leave this wall unchanged.
    and no AI involvement.
 4. **Reading notes back in the user's own voice** is a future feature out of scope for block
    notes and does not change this spec.
+
+## Owner ruling, 2026-11-24
+
+**Reminders can be permanently deleted, from the wall and from the archive, after a
+confirmation step.** Deleting removes the reminder completely: it is not archived and does
+not appear in exports afterwards. Categories are unaffected. This supersedes the earlier
+"No reminder deletion" choice in A5, open question 4 and *Out of scope*, and is specified by
+`deleteReminder` in the Contract and by AC-16.

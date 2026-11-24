@@ -9,7 +9,28 @@ the gate allows.
 500 ms, moves in 500 ms steps, and maxes out at 3000 ms. Minimum is 500 ms. The Settings row
 and the shared clamp are built against that range.
 
-## Round 4 — feature 12 review fixes (this round)
+## Round 5 — scroll fix + permanent reminder deletion (this round)
+
+Owner's two-part goal, 2026-11-24. Full detail in
+`progress/impl_scroll-and-reminder-delete.md`.
+
+- **Week grid scroll bug (feature 12):** `WeekTab` no longer sets `touch-action: none` on the
+  grid or `preventDefault`s every pointer-down. The grid is `pan-y` normally; a new
+  `scrollLocked` state becomes `none` only while a recognised long-press is active and is
+  cleared on lift/cancel/leave (including a window-level release). A finger moving >8 px
+  before the hold time cancels the gesture so the grid scrolls. Spec 012 amended (owner
+  ruling + AC-9/UI state), and `tests/unit/notes.test.js` now tests the scroll-lock state.
+- **Permanent reminder deletion (feature 11):** new pure `deleteReminder`; armed `Delete` on
+  both wall post-its and archive cards; deleted reminders leave the wall and therefore every
+  later export; categories untouched. Spec 011 gained AC-16 and the 2026-11-24 owner ruling.
+  New pure + source tests in `tests/unit/reminderWall.test.js`.
+- Gate: `npm test --silent` → 8 files, 219 tests passed; `bash init.sh` → `[OK]`.
+
+**Remaining:** device-only feel/rendered checks (scroll gesture, delete confirmation, plus
+the earlier feature 11/12 device checks). No known source work. 11 stays `in_review`, 12
+stays `in_progress`.
+
+## Round 4 — feature 12 review fixes
 
 Addressed both required changes in `progress/review_mwv4y4y9.md`:
 

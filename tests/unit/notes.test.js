@@ -324,10 +324,27 @@ describe("source guarantees for the week note UI", () => {
     expect(week).toMatch(/if \(brush != null \|\| noteDlg\) return;/);
   });
 
-  it("keeps the grid from scrolling under the finger and marks the range start", () => {
-    expect(week).toMatch(/touchAction:\s*"none"/);
-    expect(week).toMatch(/preventDefault\(\)/);
+  // Owner ruling 2026-11-24: the grid scrolls normally. Only a recognised hold
+  // may pause scrolling, and a lift or cancel must release the lock.
+  it("allows vertical scrolling and locks it only while a hold is in progress", () => {
+    expect(week).not.toMatch(/touchAction:\s*"none"/);
+    expect(week).toMatch(/touchAction:\s*scrollLocked\s*\?\s*"none"\s*:\s*"pan-y"/);
+    expect(week).toMatch(/\[scrollLocked,\s*setScrollLocked\]/);
+    expect(week).toMatch(/setScrollLocked\(true\)/);
+    expect(week).toMatch(/setScrollLocked\(false\)/);
+    expect(week).toMatch(/onPointerMove=\{handleCellPointerMove\}/);
+    expect(week).toMatch(/onPointerUp=\{clearHold\}/);
+    expect(week).toMatch(/onPointerCancel=\{clearHold\}/);
+    expect(week).toMatch(/onPointerLeave=\{clearHold\}/);
     expect(week).toMatch(/noteStarts\.has\(globalIndex\)/);
+  });
+
+  it("cancels the hold instead of hijacking a scroll gesture", () => {
+    const down = week.slice(week.indexOf("function handleCellPointerDown"));
+    const handler = down.slice(0, down.indexOf("function handleCellPointerMove"));
+    expect(handler).not.toMatch(/preventDefault/);
+    expect(week).toMatch(/HOLD_CANCEL_PX/);
+    expect(week).toMatch(/Math\.hypot/);
   });
 
   it("cleans the transcript before the field and gates polish on the AI setting", () => {
