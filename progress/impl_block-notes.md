@@ -60,14 +60,38 @@ permission, and the plugin registration order.
 - `npm test --silent` → 7 files, 198 tests, all pass.
 - `bash init.sh` → `[OK] build green, tests green, scope clean` (in progress: 12).
 
+## Round 2 — Week tab note UI
+
+`src/components/WeekTab.jsx` now has the gesture and all note surfaces:
+
+- Long-press on a filled cell with no brush selected holds for `settings.longPressMs`
+  (fallback 500). It resolves the same-category run with `categoryRunAt`, opens the viewer
+  when `noteAt` finds a note, refuses an overlapping range with one line, and otherwise opens
+  the editor for that run.
+- Pointer up/leave/cancel clears the hold. The inner grid uses `touch-action: none` and the
+  gesture calls `preventDefault`, so the `overflow-auto` container does not scroll during a
+  hold. A brush or eraser makes the handler return immediately, so painting is untouched.
+- Editor: `addNote`/`updateNote` with an ISO `at`, Save disabled while the trimmed text is
+  empty, error codes mapped to one line, explicit armed Delete (`useArmed`), no drag extend.
+- Viewer: text only, Edit and armed Delete, no audio or play control.
+- A marker dot renders on the first cell of every note range, including a cell that has been
+  erased since the note was written.
+- Dictation: `dictationSupported`/`startDictation`, transcript passed through
+  `cleanDictation`, microphone disabled on denial/unsupported with one line. No audio is
+  retained.
+- Polish: button only when `aiEnabled`, explicit `polishText` call, text unchanged on failure,
+  never saved automatically (user reviews, then Save).
+- `clear this week` keeps `{ ...wk, cells: {} }` and now says notes are kept.
+
+`src/App.jsx` passes `settings`, `ai` and `aiEnabled` to `WeekTab`.
+
+Tests: 5 source tests added to `tests/unit/notes.test.js`. `npm test --silent` → 203 passed;
+`bash init.sh` → `[OK] build green, tests green, scope clean`.
+
 ## Not done (next rounds)
 
-- WeekTab: long-press detection at `settings.longPressMs`, same-category run selection, note
-  editor/viewer, marker on the first cell, brush conflict and `touch-action: none`, delete via
-  `useArmed`, Save-disabled on empty text.
 - SettingsTab: hold-time row, **blocked on open question 4** (minimum/maximum of
   `longPressMs`). The range was not guessed.
-- Dictation microphone and polish controls in the note editor.
 - Device-only verification: AC-8, AC-9, AC-10, AC-11, marker half of AC-14, dictation/polish
   UI half of AC-15.
 

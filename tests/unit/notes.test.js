@@ -297,3 +297,44 @@ describe("source guarantees for the note data and the export", () => {
     expect(create.indexOf("registerPlugin(DictationPlugin.class)")).toBeLessThan(create.lastIndexOf("super.onCreate"));
   });
 });
+
+describe("source guarantees for the week note UI", () => {
+  const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+  const week = read("../../src/components/WeekTab.jsx");
+
+  it("selects the same-category run and resolves an existing note before opening an editor", () => {
+    expect(week).toMatch(/categoryRunAt\(weekCells, tasks, index\)/);
+    expect(week).toMatch(/noteAt\(weekNotes, index\)/);
+    expect(week).toMatch(/canPlaceNote\(weekNotes, run\.start, run\.end\)/);
+    expect(week).toMatch(/addNote\(weekNotes/);
+    expect(week).toMatch(/updateNote\(weekNotes/);
+    expect(week).toMatch(/removeNote\(weekNotes/);
+  });
+
+  it("uses the user's hold time and never starts a note gesture while a brush is active", () => {
+    expect(week).toMatch(/settings\.longPressMs/);
+    expect(week).toMatch(/setTimeout\(/);
+    expect(week).toMatch(/if \(brush != null \|\| noteDlg\) return;/);
+  });
+
+  it("keeps the grid from scrolling under the finger and marks the range start", () => {
+    expect(week).toMatch(/touchAction:\s*"none"/);
+    expect(week).toMatch(/preventDefault\(\)/);
+    expect(week).toMatch(/noteStarts\.has\(globalIndex\)/);
+  });
+
+  it("cleans the transcript before the field and gates polish on the AI setting", () => {
+    expect(week).toMatch(/cleanDictation\(/);
+    expect(week).toMatch(/polishText\(/);
+    expect(week).toMatch(/aiEnabled &&/);
+    expect(week).toMatch(/notes: next/);
+  });
+
+  it("passes settings and the AI context from the app into the week tab", () => {
+    const app = read("../../src/App.jsx");
+    const line = app.split("\n").find((l) => l.includes("<WeekTab"));
+    expect(line).toMatch(/settings=\{store\.settings\}/);
+    expect(line).toMatch(/ai=\{ai\}/);
+    expect(line).toMatch(/aiEnabled=\{aiEnabled\}/);
+  });
+});

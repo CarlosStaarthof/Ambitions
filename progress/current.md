@@ -1,15 +1,46 @@
 # Current session
 
 **Date:** 2026-11-24
-**In flight:** feature 12 `block-notes` — round 1 (core + data + dictation plugin). Not complete.
+**In flight:** feature 12 `block-notes` — round 2 (core, data, dictation and Week tab UI done). Not complete.
 Feature 11 `reminder-wall` was moved from `in_progress` to `in_review` (implemented, waiting on
 its reviewer); 12 is now the single `in_progress` feature the gate allows.
 
 **Open question 4 still needs the owner:** `settings.longPressMs` minimum and maximum. The
-range was deliberately not guessed, so the Settings row and the hold-time clamp are not built
-yet. Everything else in this round is independent of it.
+range was deliberately not guessed, so the Settings row and the hold-time clamp are still not
+built. Everything else in the feature is independent of it and is now built.
 
-## Round 1 — feature 12 core, data and dictation (this round)
+## Round 2 — feature 12 Week tab notes UI (this round)
+
+- `src/components/WeekTab.jsx` now owns the note gesture and surfaces:
+  - long-press on a filled cell with **no brush selected** waits `settings.longPressMs`
+    (default 500), resolves the whole same-category run through `categoryRunAt`, refuses an
+    overlapping range with one line, opens the viewer through `noteAt`, or opens an empty
+    editor for a fresh run.
+  - cell pointer handlers cancel on up/leave/cancel; the inner grid sets `touch-action: none`
+    and the gesture calls `preventDefault`, so the `overflow-auto` container cannot scroll
+    during a hold. With a brush or eraser selected the handlers return immediately and paint
+    is unchanged.
+  - editor: trimmed text required to Save, `addNote`/`updateNote` with `new Date().toISOString()`,
+    explicit armed Delete via the existing `useArmed`, error codes mapped to one line.
+  - viewer: text only, no audio/play control, Edit and armed Delete.
+  - marker dot on the first cell of each note range, including a cell that is now empty.
+  - dictation button calls `dictationSupported`/`startDictation`, passes the transcript
+    through `cleanDictation`, disables on denial/unsupported and shows one line; no audio is
+    stored or exported.
+  - Polish button renders only when `aiEnabled` (AI on, provider not `none`, key present),
+    calls `polishText` explicitly, leaves text unchanged on failure, and never saves on its
+    own — the user reviews and taps Save.
+  - `clear this week` keeps its `{ ...wk, cells: {} }` spread and now says notes are kept.
+- `src/App.jsx` passes `settings`, `ai` and `aiEnabled` into `WeekTab` (no new store key).
+- `tests/unit/notes.test.js`: 5 added source tests for the UI wiring (run selection, existing
+  note, hold time + brush guard, `touch-action`/marker, cleaned dictation/polish gating, and
+  the App props). `npm test --silent` → 7 files, 203 tests passed. `bash init.sh` → `[OK]`.
+
+**Remaining for feature 12:** the SettingsTab hold-time row (blocked on open question 4:
+minimum/maximum of `settings.longPressMs`), and the device-only checks for AC-8 to AC-11, the
+marker half of AC-14, and the dictation/polish UI half of AC-15.
+
+## Round 1 — feature 12 core, data and dictation
 
 - New pure `src/lib/notes.js`: `notesOf`, `categoryRunAt`, `noteAt`, `canPlaceNote`,
   `validateNote`, `addNote`, `updateNote`, `removeNote`, `cleanDictation`,

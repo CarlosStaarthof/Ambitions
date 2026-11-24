@@ -99,7 +99,7 @@ export default function App() {
         {section === "plan" && (
           <>
             <SubTabs value={planSub} onChange={setPlanSub} tabs={[["week", "Week"], ["balance", "Balance"]]} />
-            {planSub === "week" && <WeekTab tasks={store.tasks} categories={store.categories} weeks={store.weeks} setWeeksP={store.setWeeksP} setTasksP={store.setTasksP} weekStart={weekStart} setWeekStart={setWeekStart} />}
+            {planSub === "week" && <WeekTab tasks={store.tasks} categories={store.categories} weeks={store.weeks} settings={store.settings} ai={ai} aiEnabled={aiEnabled} setWeeksP={store.setWeeksP} setTasksP={store.setTasksP} weekStart={weekStart} setWeekStart={setWeekStart} />}
             {planSub === "balance" && <BalanceTab tasks={store.tasks} categories={store.categories} weeks={store.weeks} weekStart={weekStart} questions={store.questions} reflections={store.reflections} setReflectionsP={store.setReflectionsP} online={online} aiEnabled={aiEnabled} ai={ai} />}
           </>
         )}

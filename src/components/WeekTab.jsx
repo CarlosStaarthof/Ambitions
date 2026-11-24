@@ -1,12 +1,35 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { ChevronLeft, ChevronRight, Eraser, Plus, X } from "lucide-react";
-import { addDays, isoDate, slotLabel, weekStatsOf, mondayOf, uid, nextColor, fmtHM } from "../lib/time";
+import { ChevronLeft, ChevronRight, Eraser, Plus, X, Mic, Sparkles, Trash2 } from "lucide-react";
+import { addDays, isoDate, slotLabel, endLabel, weekStatsOf, mondayOf, uid, nextColor, fmtHM } from "../lib/time";
 import { DAYS, SLOTS, OPEN_ID } from "../lib/seed";
 import { activeTasks, activeCategories, taskIndex, resolveCell } from "../lib/tasks";
-import { card, inputCls, btnPrimary } from "../lib/ui";
+import { notesOf, categoryRunAt, noteAt, canPlaceNote, addNote, updateNote, removeNote, cleanDictation } from "../lib/notes";
+import { dictationSupported, startDictation, cancelDictation } from "../lib/dictation";
+import { polishText } from "../lib/notePolish";
+import { card, inputCls, btnPrimary, btnGhost } from "../lib/ui";
 import { useArmed } from "../lib/useArmed";
 
 function FragmentRow({ children }) { return <>{children}</>; }
+
+const NOTE_ERRORS = {
+  "range-invalid": "That range is invalid.",
+  "empty-note": "Write something before saving.",
+  overlap: "That range already has a note. Open it first.",
+  "note-not-found": "That note no longer exists."
+};
+
+const DICTATION_ERRORS = {
+  "dictation-denied": "Microphone access is blocked. Type the note instead.",
+  "dictation-unsupported": "Dictation is not available here. Type the note instead.",
+  "dictation-no-speech": "No speech was heard. Try again or type the note."
+};
+
+const rangeLabel = (start, end) => {
+  const day = Math.floor(start / SLOTS);
+  const from = start % SLOTS;
+  const to = end - day * SLOTS;
+  return `${DAYS[day]} ${slotLabel(from)}–${endLabel(to)}`;
+};
 
 // Live clock for the grid highlights. 30s is plenty — a slot is 30 minutes, and
 // re-rendering 336 cells every second would be wasteful.
@@ -16,19 +39,28 @@ function useNow(intervalMs = 30000) {
   return now;
 }
 
-export default function WeekTab({ tasks, categories, weeks, setWeeksP, setTasksP, weekStart, setWeekStart }) {
+export default function WeekTab({ tasks, categories, weeks, settings, ai, aiEnabled, setWeeksP, setTasksP, weekStart, setWeekStart }) {
   const [brush, setBrush] = useState(null);
   const [openCat, setOpenCat] = useState(null);
   const [openDlg, setOpenDlg] = useState(false);
   const [openName, setOpenName] = useState("");
+  const [noteDlg, setNoteDlg] = useState(null);
+  const [noteMsg, setNoteMsg] = useState("");
   const paintingRef = useRef(false);
+  const holdRef = useRef(null);
   const { arm, isArmed } = useArmed();
   const now = useNow();
+  const holdMs = settings && Number.isFinite(settings.longPressMs) ? settings.longPressMs : 500;
+  const canDictate = dictationSupported();
 
   useEffect(() => { const up = () => { paintingRef.current = false; }; window.addEventListener("mouseup", up); return () => window.removeEventListener("mouseup", up); }, []);
+  useEffect(() => () => clearHold(), []);
+  useEffect(() => { if (brush != null) clearHold(); }, [brush]);
 
   const weekKey = isoDate(weekStart);
   const weekCells = useMemo(() => (weeks[weekKey] && weeks[weekKey].cells) || {}, [weeks, weekKey]);
+  const weekNotes = useMemo(() => notesOf(weeks[weekKey]), [weeks, weekKey]);
+  const noteStarts = useMemo(() => new Set(weekNotes.map((n) => n && n.start)), [weekNotes]);
   // The grid resolves against ALL tasks, retired included: a week already painted is a
   // record of what was done, so its blocks keep their real name and colour forever.
   // Everything that *edits* the week — picker, chips, counts — uses the active lists only.
@@ -75,6 +107,102 @@ export default function WeekTab({ tasks, categories, weeks, setWeeksP, setTasksP
     setWeeksP((prev) => { const wk = prev[weekKey] || { cells: {} }; const cells = { ...wk.cells }; if (brush === "erase") delete cells[key]; else cells[key] = brush; return { ...prev, [weekKey]: { ...wk, cells } }; });
   }
 
+  function clearHold() {
+    if (holdRef.current) { clearTimeout(holdRef.current); holdRef.current = null; }
+  }
+
+  // Notes are a sibling field of `cells`, so every write keeps the rest of the week —
+  // including feature 8's approval/snapshot fields — untouched.
+  function writeNotes(next) {
+    setWeeksP((prev) => {
+      const wk = prev[weekKey] || { cells: {} };
+      return { ...prev, [weekKey]: { ...wk, notes: next } };
+    });
+  }
+
+  function openNoteAt(index) {
+    setNoteMsg("");
+    const existing = noteAt(weekNotes, index);
+    if (existing) {
+      setNoteDlg({ mode: "view", id: existing.id, start: existing.start, end: existing.end, text: existing.text, error: "", notice: "", dictationError: "", micOff: false, busy: false });
+      return;
+    }
+    const run = categoryRunAt(weekCells, tasks, index);
+    if (!run) {
+      setNoteMsg("Long-press a filled block to add a note.");
+      return;
+    }
+    if (!canPlaceNote(weekNotes, run.start, run.end)) {
+      setNoteMsg("That range already has a note. Open it first.");
+      return;
+    }
+    setNoteDlg({ mode: "edit", id: null, start: run.start, end: run.end, text: "", error: "", notice: "", dictationError: "", micOff: false, busy: false });
+  }
+
+  function handleCellPointerDown(d, s, e) {
+    // A brush or the eraser owns touch-down: painting is unchanged and no note fires.
+    if (brush != null || noteDlg) return;
+    e.preventDefault();
+    clearHold();
+    const index = d * SLOTS + s;
+    holdRef.current = setTimeout(() => {
+      holdRef.current = null;
+      openNoteAt(index);
+    }, holdMs);
+  }
+
+  function closeNote() {
+    cancelDictation();
+    setNoteDlg(null);
+  }
+
+  function saveNote() {
+    const at = new Date().toISOString();
+    const text = noteDlg.text;
+    const result = noteDlg.id
+      ? updateNote(weekNotes, noteDlg.id, { text }, at)
+      : addNote(weekNotes, { id: uid(), start: noteDlg.start, end: noteDlg.end, text, at });
+    if (result.error) { setNoteDlg((d) => ({ ...d, error: NOTE_ERRORS[result.error] || "Could not save the note." })); return; }
+    writeNotes(result.notes);
+    closeNote();
+  }
+
+  function deleteNote(id) {
+    writeNotes(removeNote(weekNotes, id));
+    closeNote();
+  }
+
+  async function dictate() {
+    if (!canDictate || noteDlg.busy) return;
+    setNoteDlg((d) => ({ ...d, dictationError: "", notice: "", busy: true }));
+    const res = await startDictation();
+    if (res && res.error) {
+      setNoteDlg((d) => ({ ...d, busy: false, micOff: res.error === "dictation-denied", dictationError: DICTATION_ERRORS[res.error] || DICTATION_ERRORS["dictation-unsupported"] }));
+      return;
+    }
+    // The phone's transcript always passes the non-AI cleanup before it reaches the field.
+    const cleaned = cleanDictation((res && res.text) || "");
+    setNoteDlg((d) => ({
+      ...d,
+      busy: false,
+      text: [d.text.trim(), cleaned].filter(Boolean).join(" "),
+      notice: cleaned ? "" : "Nothing was heard. Try again or type the note."
+    }));
+  }
+
+  async function polish() {
+    if (!aiEnabled || !noteDlg || noteDlg.busy) return;
+    if (!noteDlg.text.trim()) { setNoteDlg((d) => ({ ...d, error: "Write something before polishing." })); return; }
+    setNoteDlg((d) => ({ ...d, busy: true, error: "", notice: "" }));
+    const res = await polishText(noteDlg.text, { settings, aiKeys: (ai && ai.keys) || {} });
+    if (res && res.error) {
+      setNoteDlg((d) => ({ ...d, busy: false, error: "Could not polish the note. Your text is unchanged." }));
+      return;
+    }
+    // Shown for review only — the user still has to Save, so nothing is replaced silently.
+    setNoteDlg((d) => ({ ...d, busy: false, text: res.text, notice: "Polished — review it, then Save." }));
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
@@ -92,8 +220,10 @@ export default function WeekTab({ tasks, categories, weeks, setWeeksP, setTasksP
         ))}
       </div>
 
+      {noteMsg && <div className="text-xs text-amber-300">{noteMsg}</div>}
+
       <div className="border border-zinc-800 rounded-xl bg-zinc-900 overflow-auto" style={{ maxHeight: "58vh", userSelect: "none" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "44px repeat(7, 1fr)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "44px repeat(7, 1fr)", touchAction: "none" }} onContextMenu={(e) => e.preventDefault()}>
           {/* The header's corner box doubles as the Erase toggle — it's sticky, so it
               stays reachable no matter how far down the grid you've scrolled. */}
           <button onClick={() => setBrush(brush === "erase" ? null : "erase")} aria-label="Erase" title="Erase"
@@ -121,6 +251,7 @@ export default function WeekTab({ tasks, categories, weeks, setWeeksP, setTasksP
                 </div>
                 {DAYS.map((_, d) => {
                   const id = weekCells[`${d}-${s}`];
+                  const globalIndex = d * SLOTS + s;
                   // Three kinds only: empty, a task, or a scheduled half hour whose task
                   // cannot be named. An unknown cell used to render pixel-identical to an
                   // empty one, which is what made the lost history invisible.
@@ -129,6 +260,9 @@ export default function WeekTab({ tasks, categories, weeks, setWeeksP, setTasksP
                   const isStart = filledCell && weekCells[`${d}-${s - 1}`] !== id;
                   const isToday = isThisWeek && d === todayIdx;
                   const isNowCell = isNowRow && isToday;
+                  // A note is marked on the first cell of its range, even after the cells
+                  // under it were erased — the note stays anchored to time, not to a task.
+                  const hasNoteStart = noteStarts.has(globalIndex);
                   // Tints only paint on empty cells, so they never fight a block colour.
                   const tint = filledCell ? null : isNowCell ? "rgba(245,158,11,0.30)" : isNowRow ? "rgba(245,158,11,0.12)" : isToday ? "rgba(245,158,11,0.06)" : null;
                   return (
@@ -136,7 +270,11 @@ export default function WeekTab({ tasks, categories, weeks, setWeeksP, setTasksP
                       onMouseDown={() => { paintingRef.current = true; applyBrush(d, s); }}
                       onMouseEnter={() => { if (paintingRef.current) applyBrush(d, s); }}
                       onClick={() => applyBrush(d, s)}
-                      className={"border-l border-zinc-800 cursor-pointer flex items-center justify-center " + (onHour ? "border-t border-zinc-700" : "")}
+                      onPointerDown={(e) => handleCellPointerDown(d, s, e)}
+                      onPointerUp={clearHold}
+                      onPointerCancel={clearHold}
+                      onPointerLeave={clearHold}
+                      className={"relative border-l border-zinc-800 cursor-pointer flex items-center justify-center " + (onHour ? "border-t border-zinc-700" : "")}
                       style={{
                         height: 26,
                         background: filledCell ? cell.color : tint || "transparent",
@@ -146,6 +284,7 @@ export default function WeekTab({ tasks, categories, weeks, setWeeksP, setTasksP
                         outlineOffset: isNowCell ? -1 : undefined
                       }}>
                       {isStart && <span style={{ fontSize: 9, color: "#fff", fontWeight: 600 }}>{cell.code}</span>}
+                      {hasNoteStart && <span aria-label="Note" title="Note" style={{ position: "absolute", top: 2, right: 2, width: 6, height: 6, borderRadius: 9999, background: "#fbbf24", boxShadow: "0 0 0 1px rgba(0,0,0,0.5)" }} />}
                     </div>
                   );
                 })}
@@ -192,7 +331,8 @@ export default function WeekTab({ tasks, categories, weeks, setWeeksP, setTasksP
             // Notes are user writing about the time, not part of the schedule. The
             // armed action clears blocks only; their markers stay anchored.
             return { ...p, [weekKey]: { ...wk, cells: {} } };
-          }))} className={"text-xs px-2 py-1 rounded-lg " + (isArmed("clearWeek") ? "bg-red-600 text-white" : "text-red-400 hover:bg-zinc-800")}>{isArmed("clearWeek") ? "tap to confirm" : "clear this week"}</button>
+          }))} title="Clears the painted blocks; notes are kept" className={"text-xs px-2 py-1 rounded-lg " + (isArmed("clearWeek") ? "bg-red-600 text-white" : "text-red-400 hover:bg-zinc-800")}>{isArmed("clearWeek") ? "tap to confirm" : "clear this week"}</button>
+          <span className="text-[11px] text-zinc-500">blocks only — notes are kept</span>
           <button onClick={() => { setOpenName(""); setOpenDlg(true); }} className="text-xs px-2 py-1 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 inline-flex items-center gap-1"><Plus size={12} /> Open task</button>
         </div>
       </div>
@@ -218,6 +358,84 @@ export default function WeekTab({ tasks, categories, weeks, setWeeksP, setTasksP
               <button onClick={() => setOpenDlg(false)} className="text-xs px-3 py-1.5 rounded-lg text-zinc-400 hover:bg-zinc-800">Cancel</button>
               <button onClick={createOpenTask} disabled={!openName.trim()} className={btnPrimary + " text-xs py-1.5"}>Create &amp; paint</button>
             </div>
+          </div>
+        </>
+      )}
+
+      {noteDlg && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/70" />
+          <div className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(24rem,92vw)] bg-zinc-900 border border-zinc-700 rounded-xl p-4 space-y-3 shadow-xl">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-sm font-medium">{noteDlg.mode === "view" ? "Note" : noteDlg.id ? "Edit note" : "New note"}</div>
+                <div className="text-[11px] text-zinc-500">{rangeLabel(noteDlg.start, noteDlg.end)}</div>
+              </div>
+              <button onClick={closeNote} aria-label="Close" className="p-1 rounded-lg text-zinc-400 hover:bg-zinc-800 shrink-0"><X size={16} /></button>
+            </div>
+
+            {noteDlg.mode === "view" ? (
+              <>
+                <p className="text-sm text-zinc-200 whitespace-pre-wrap break-words max-h-52 overflow-auto">{noteDlg.text}</p>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <button
+                    onClick={() => arm("note-" + noteDlg.id, () => deleteNote(noteDlg.id))}
+                    className={"inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg " + (isArmed("note-" + noteDlg.id) ? "bg-red-600 text-white" : "text-red-400 hover:bg-zinc-800")}
+                  >
+                    <Trash2 size={13} /> {isArmed("note-" + noteDlg.id) ? "tap to confirm" : "Delete"}
+                  </button>
+                  <button onClick={closeNote} className="text-xs px-3 py-1.5 rounded-lg text-zinc-400 hover:bg-zinc-800">Close</button>
+                  <button onClick={() => setNoteDlg((d) => ({ ...d, mode: "edit", error: "", notice: "" }))} className={btnPrimary + " text-xs py-1.5"}>Edit</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <textarea
+                  value={noteDlg.text}
+                  onChange={(e) => setNoteDlg((d) => ({ ...d, text: e.target.value, error: "" }))}
+                  placeholder="What happened?"
+                  rows={5}
+                  autoFocus
+                  className={inputCls + " resize-y"}
+                />
+
+                {noteDlg.error && <p className="text-[11px] text-red-400">{noteDlg.error}</p>}
+                {noteDlg.notice && <p className="text-[11px] text-amber-300">{noteDlg.notice}</p>}
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={dictate}
+                    disabled={!canDictate || noteDlg.busy || noteDlg.micOff}
+                    title={canDictate ? "Dictate with the phone's speech-to-text" : "Dictation needs the Android app"}
+                    className={btnGhost + " text-xs py-1.5 disabled:opacity-40"}
+                  >
+                    <Mic size={13} /> Dictate
+                  </button>
+                  {aiEnabled && (
+                    <button onClick={polish} disabled={noteDlg.busy} className={btnGhost + " text-xs py-1.5 disabled:opacity-40"}>
+                      <Sparkles size={13} /> Polish
+                    </button>
+                  )}
+                  {noteDlg.id && (
+                    <button
+                      onClick={() => arm("note-" + noteDlg.id, () => deleteNote(noteDlg.id))}
+                      className={"inline-flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg " + (isArmed("note-" + noteDlg.id) ? "bg-red-600 text-white" : "text-red-400 hover:bg-zinc-800")}
+                    >
+                      <Trash2 size={13} /> {isArmed("note-" + noteDlg.id) ? "tap to confirm" : "Delete"}
+                    </button>
+                  )}
+                </div>
+
+                {!canDictate && <p className="text-[11px] text-zinc-500">Dictation needs the Android app. Type the note instead.</p>}
+                {noteDlg.dictationError && <p className="text-[11px] text-amber-400">{noteDlg.dictationError}</p>}
+                <p className="text-[11px] text-zinc-500">No audio is stored. AI polish appears only when your own key is set up in Settings.</p>
+
+                <div className="flex justify-end gap-2">
+                  <button onClick={closeNote} className="text-xs px-3 py-1.5 rounded-lg text-zinc-400 hover:bg-zinc-800">Cancel</button>
+                  <button onClick={saveNote} disabled={!noteDlg.text.trim() || noteDlg.busy} className={btnPrimary + " text-xs py-1.5"}>Save</button>
+                </div>
+              </>
+            )}
           </div>
         </>
       )}
