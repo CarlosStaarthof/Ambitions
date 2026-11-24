@@ -1,10 +1,30 @@
 # Current session
 
-**Date:** 2026-10-13
-**In flight:** issue-3 fix (not a numbered feature — no `feature_list.json` entry)
-**Unblocked:** feature 8 `week-approval` (its dependencies 3 and 7 are both done)
+**Date:** 2026-11-24
+**In flight:** no feature `in_progress` — specs 11 and 12 are `spec_ready`, awaiting owner approval
+**Unblocked:** feature 8 `week-approval` (its dependencies 3 and 7 are both done), and
+features 11 / 12 once their open questions are answered.
 
-## This round — issue-3
+## This round — specs 011 and 012
+
+Wrote two specs, no implementation:
+
+- `specs/features/011-reminder-wall.md` — a new top-level Reminders section: a post-it wall,
+  user-owned reminder categories separate from time-block categories, every reminder in one
+  category, create/edit/tick-done, and a read-only archive. New `reminderWall` localForage
+  key; export becomes `version: 6` and carries the wall. No notification scheduling, no
+  undo/edit of archived reminders, no per-reminder colour.
+- `specs/features/012-block-notes.md` — comments on one block or several adjacent blocks on
+  the Plan & Balance Week grid. Notes are stored inside `weeks[weekKey].notes`, anchored to
+  a half-hour time range, not a task id. Text, a compressed voice clip (Android AAC 32 kbps,
+  web Opus, 2-minute cap), or both. Import/export merge keeps both stored and incoming notes;
+  `clear this week` keeps notes. No new localForage key.
+
+Both feature_list entries were added as `spec_ready` with the acceptance arrays left to be
+filled after approval. Each spec ends with the open questions the owner must settle before
+implementation begins.
+
+## Previous round — issue-3
 
 Resolving GitHub issue #3 "hourly tasks missing in past weeks" against the new evidence
 from the owner's export (all week keys are valid Mondays; no cell points at a missing task

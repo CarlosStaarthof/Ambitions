@@ -187,6 +187,24 @@
       "spec": "specs/features/010-week-balance-ui.md",
       "why": "Two small UI changes the user asked for. (1) Calendar blocks show the full task name truncated to fit, replacing the 3-letter codeFor() label. (2) Balance section order becomes stat cards, Ambition plans, Hours by task, Guiding questions, then the AI card last.",
       "acceptance": []
+    },
+    {
+      "id": 11,
+      "name": "reminder-wall",
+      "title": "Post-it reminder wall with user categories and an archive",
+      "status": "spec_ready",
+      "spec": "specs/features/011-reminder-wall.md",
+      "why": "The app can record what was done and what was reflected on, but has nowhere to capture a plain 'remember this' item. A separate wall with user-owned reminder categories, ticked-done reminders kept in a read-only archive, and a JSON-backup round trip. No new scope: no notifications, due dates or AI.",
+      "acceptance": []
+    },
+    {
+      "id": 12,
+      "name": "block-notes",
+      "title": "Text and voice notes on adjacent Plan & Balance week blocks",
+      "status": "spec_ready",
+      "spec": "specs/features/012-block-notes.md",
+      "why": "A painted week cell records only which task occupied it. Long-press one block or drag across adjacent blocks to attach text, a compressed voice clip capped at 2 minutes, or both; long-press later shows or plays the note. Notes live inside the existing weeks key so they survive export and import.",
+      "acceptance": []
     }
   ]
 }
