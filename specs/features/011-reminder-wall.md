@@ -323,3 +323,20 @@ repo has no component tests; claiming otherwise would be a false coverage claim.
    deletable instead of only ticked done?
 5. **No notifications are attached to wall reminders (chosen).** Should a wall reminder
    ever schedule an alert, or does "reminder" here mean only the visible post-it?
+
+## Owner rulings, 2026-11-18
+
+The owner recorded four rulings this day. Only ruling 1 changes this spec; rulings 2–4
+concern block notes (spec 012) and leave this wall unchanged.
+
+1. **The error list and the acceptance criteria agree.** Every error code in the Contract has
+   at least one acceptance criterion that triggers it. `name-empty` and `name-duplicate` are
+   covered by AC-4 and AC-5; `category-missing` by AC-5, AC-6 and AC-7; `category-not-empty`
+   by AC-6; `text-empty` by AC-7 and AC-8; `reminder-not-found` by AC-8 and AC-9; and
+   `reminder-archived` by AC-8.
+2. **Long-press hold time and same-category run selection** applies to block notes only and
+   does not change this spec.
+3. **Dictation instead of stored audio** applies to block notes only; the wall has no audio
+   and no AI involvement.
+4. **Reading notes back in the user's own voice** is a future feature out of scope for block
+   notes and does not change this spec.

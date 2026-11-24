@@ -200,10 +200,10 @@
     {
       "id": 12,
       "name": "block-notes",
-      "title": "Text and voice notes on adjacent Plan & Balance week blocks",
+      "title": "Dictated text notes on a same-category run of Plan & Balance week blocks",
       "status": "spec_ready",
       "spec": "specs/features/012-block-notes.md",
-      "why": "A painted week cell records only which task occupied it. Long-press one block or drag across adjacent blocks to attach text, a compressed voice clip capped at 2 minutes, or both; long-press later shows or plays the note. Notes live inside the existing weeks key so they survive export and import.",
+      "why": "A painted week cell records only which task occupied it. Long-press a block to attach one text note to the whole unbroken run of the same category above and below it in that day (a sleep or a work shift); the note is typed or dictated with the phone's speech-to-text and cleaned without AI. Optional AI polish needs the user's own on-device key and is off by default. No audio is stored. Notes live inside the existing weeks key so they survive export and import.",
       "acceptance": []
     }
   ]

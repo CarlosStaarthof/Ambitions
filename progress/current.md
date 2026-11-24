@@ -5,7 +5,36 @@
 **Unblocked:** feature 8 `week-approval` (its dependencies 3 and 7 are both done), and
 features 11 / 12 once their open questions are answered.
 
-## This round — review fixes for specs 011 and 012
+## This round — owner rulings recorded in specs 011 and 012 (stopped for approval)
+
+Applied the owner's 2026-11-18 rulings and the required changes in
+`progress/review_mwv3gmgd.md`. Still spec-only: no `src/`, `tests/` or `android/` change.
+
+- Both specs now end with `## Owner rulings, 2026-11-18`. 011 records ruling 1 (error list and
+  ACs agree, with the code-to-AC mapping) and notes that rulings 2–4 concern 012 only.
+- 012 rewritten for the rulings:
+  - Ruling 2: the hold time is `settings.longPressMs`, default 500 ms, 500 ms steps (range is
+    open question 4, not guessed). A long-press selects the whole unbroken same-category run
+    above and below the pressed block **within that day**; the drag selection is gone. The
+    brush/touch-action rule is kept. New pure `categoryRunAt(cells, tasks, index)` replaces
+    `blockBoundsAt`/`selectionRange` (AC-2, AC-8, AC-9).
+  - Ruling 3: no audio is stored. Removed `audio`, `dataUrl`, `mime`, `durationMs`,
+    `MAX_VOICE_MS`, `voice-invalid`, `voice-too-long`, `startVoice`/`stopVoice` and the
+    2-minute cap. Added phone speech-to-text (`dictation.js`), pure non-AI
+    `cleanDictation` (AC-7), and opt-in AI polish (`notePolish.js`) only with the user's own
+    key; the key stays in secure storage and is absent from exports (AC-12, AC-15). Error
+    list is now `range-invalid`, `empty-note`, `overlap`, `note-not-found`, each with an AC.
+  - Ruling 4: reading notes back in the user's own voice is listed as a future feature under
+    Out of scope.
+  - Replaced the stale "field list unchanged" wording, removed the 32 kbps open question, and
+    updated `feature_list.json`'s 012 title/why to match.
+- Both specs stay at 15 acceptance criteria (within 5–15).
+
+Gate: `npm test --silent` → 5 files, 140 tests passed.
+
+**Stopped for owner approval of specs 011 and 012. No implementation.**
+
+## Earlier round — review fixes for specs 011 and 012
 
 Addressed all four required changes in `progress/review_mwv2i4pq.md` (no implementation):
 
