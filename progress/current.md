@@ -14,9 +14,11 @@ to-do schema changes.
 **Work split (owner goal → features):**
 - 19 `notifications-preferences` — **done** (round 1). Quiet hours + filtered plan +
   data-change rescheduling. Review: `progress/review_notifications-preferences.md`.
-- 20 `unrecorded-nudge` — next (round 2). Spec to be written first.
-- 21 `todo-times` — start/end on wall items, start alert, export v7.
-- 22 `morning-digest` — open to-dos with no time, 08:00 editable + toggle.
+- 20 `unrecorded-nudge` — **in_review** (round 2, approved by reviewer).
+- 21 `todo-times` — **in_review** (round 3, reviewer APPROVED, device checks pending).
+  Start/end on wall items, start alert, export v7. Review:
+  `progress/review_todo-times.md`.
+- 22 `morning-digest` — next (round 4). Open to-dos with no time, 08:00 editable + toggle.
 
 Features 11, 12, 13 and 15 remain `in_review` (device checks pending). 14, 16 and 19
 are `done`.
@@ -59,14 +61,35 @@ are `done`.
   `bash init.sh` → `[OK]`.
 - No export version bump: only `settings` changed and it is not exported.
 
+## Round 3 — optional to-do times and start alert (feature 21, in_review)
+
+- Spec `specs/features/021-todo-times.md`; report `progress/impl_todo-times.md`.
+- `src/lib/time.js`: `normalizeOptionalClock` (valid `HH:MM`, else `null`).
+- `src/lib/reminderWall.js`: optional `startTime`/`endTime` on wall items; add/edit set,
+  change and clear them; `hasTodoTime`, `todoTimeLabel`; load normalisation keeps valid
+  times and drops invalid ones.
+- `src/lib/todoTimes.js` (new, pure): `nextStartAt` (today if strictly ahead, else
+  tomorrow; local parts survive DST) and `plannedTodoAlerts` (one entry per open timed
+  item, id from `notificationIdFor("todo:" + id, at)`, sorted).
+- ReminderWallTab: optional Start/End inputs in the new and edit forms; permission asked
+  at the moment a start time is saved; post-it shows the range. TodoChart card shows it.
+- `App.jsx`: todo alerts join the plan before `filterQuietOccurrences` (and before the
+  nudge); the existing `reminderWall` dep re-plans on wall edits.
+- `DataTab.jsx`: export envelope `version: 7`, same fields. Existing version-pin tests
+  updated to 7. The wall test that forbade any notification import now forbids scheduling
+  calls only — the view must ask permission, App still owns scheduling.
+- Tests: `tests/unit/todoTimes.test.js` (17). Gate: 15 files, 337 tests;
+  `bash init.sh` → `[OK]`. Reviewer required one fix: the alert id now also encodes the
+  occurrence and `updatedAt`, so a same-day start-time or text edit re-schedules instead
+  of leaving the old alarm pending; spec AC-8 amended, re-review APPROVED.
+
 ## Next round (planned)
 
-- 21 `todo-times`: write `specs/features/021-todo-times.md`, then implement. Optional
-  start/end time per wall item; a start time schedules a local notification (through the
-  existing quiet filter and reschedule deps), and the export envelope moves to v7.
-- 22 `morning-digest`: write spec, then implement the 08:00 editable/toggle digest of
-  open wall items with no time.
-- Device checks accumulate for the end of the goal (delivery with app backgrounded).
+- 22 `morning-digest`: write `specs/features/022-morning-digest.md`, then implement the
+  08:00 editable/toggle digest of open wall items with no time. It is the last
+  Notifications v2 source.
+- Device checks accumulate for the end of the goal (delivery with app backgrounded,
+  permission prompt when a start time is first set).
 
 ## Still open from the earlier goal
 

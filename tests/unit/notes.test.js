@@ -269,10 +269,10 @@ describe("source guarantees for the note data and the export", () => {
     expect(src).not.toMatch(/apiKey|aiKey|keys\s*:/);
   });
 
-  it("the export envelope stays at version 6 and has no key or secure field", () => {
+  it("the export envelope is at version 7 and has no key or secure field", () => {
     const src = read("../../src/components/DataTab.jsx");
     const payload = src.split("\n").find((l) => l.includes("const payload ="));
-    expect(payload).toMatch(/version:\s*6\b/);
+    expect(payload).toMatch(/version:\s*7\b/);
     expect(payload).toMatch(/\bweeks\b/);
     expect(payload).not.toMatch(/aiKeys|\bsecure\b|providerKey/);
   });

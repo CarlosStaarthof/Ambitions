@@ -318,14 +318,15 @@
       "id": 21,
       "name": "todo-times",
       "title": "Optional start and end time on a to-do with a start alert",
-      "status": "pending",
+      "status": "in_review",
       "spec": "specs/features/021-todo-times.md",
       "depends_on": [
         11,
         19
       ],
       "why": "Owner request: a to-do may carry an optional start and end time (never required). A to-do with a start time gets a local notification at that start time. The to-do schema changes, so the export version must be bumped.",
-      "acceptance": []
+      "acceptance": [],
+      "review": "progress/review_todo-times.md"
     },
     {
       "id": 22,

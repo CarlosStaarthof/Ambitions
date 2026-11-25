@@ -106,6 +106,14 @@ export function normalizeClock(value, fallback) {
   return `${pad(h)}:${pad(min)}`;
 }
 
+// Optional clocks have no fallback: a to-do with no time must stay untimed, so an
+// invalid value becomes null rather than a repaired default.
+export function normalizeOptionalClock(value) {
+  const minutes = minutesOfClock(value);
+  if (minutes == null) return null;
+  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+}
+
 // Null, not a clamp: callers that need a comparable minute must be able to tell a
 // real clock from a repaired one.
 export function minutesOfClock(value) {

@@ -3,11 +3,12 @@ import { Check, Clock, Pencil, Plus, Trash2, X } from "lucide-react";
 import { uid } from "../lib/time";
 import { card, inputCls, selectCls, btnPrimary, btnGhost } from "../lib/ui";
 import { useArmed } from "../lib/useArmed";
+import { notifyPermission, requestNotifyPermission } from "../lib/notify";
 import {
   UNCATEGORIZED_ID, UNCATEGORIZED_COLOR,
   activeReminders, archivedReminders, categoryUsage, createdDate,
   addCategory, renameCategory, deleteCategory, addReminder, editReminder, markDone,
-  deleteReminder
+  deleteReminder, todoTimeLabel
 } from "../lib/reminderWall";
 
 const COPY = {
@@ -41,10 +42,14 @@ export default function ReminderWallTab({ reminderWall, setReminderWallP, view =
   const [filter, setFilter] = useState("all");
   const [newText, setNewText] = useState("");
   const [newCatId, setNewCatId] = useState("");
+  const [newStart, setNewStart] = useState("");
+  const [newEnd, setNewEnd] = useState("");
   const [addError, setAddError] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
   const [editCatId, setEditCatId] = useState("");
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
   const [editError, setEditError] = useState("");
   const [deleteError, setDeleteError] = useState("");
 
@@ -82,21 +87,41 @@ export default function ReminderWallTab({ reminderWall, setReminderWallP, view =
     if (newCatId === cat.id) setNewCatId("");
   }
 
+  // Setting a start time is the moment of intent for its alert, so the system
+  // permission is asked here — once, and never at launch. A denied prompt still
+  // saves the to-do; it just schedules nothing.
+  async function ensureNotifyPermission(startTime) {
+    if (!startTime) return;
+    try {
+      if ((await notifyPermission()) === "granted") return;
+      await requestNotifyPermission();
+    } catch { /* notifications are optional; the to-do must still save */ }
+  }
+
   function addItem() {
-    const r = addReminder(reminderWall, { id: uid(), categoryId: selectedCat, text: newText, at: new Date().toISOString() });
+    const r = addReminder(reminderWall, {
+      id: uid(), categoryId: selectedCat, text: newText, at: new Date().toISOString(),
+      startTime: newStart, endTime: newEnd
+    });
     if (r.error) { setAddError(r.error); return; }
     setReminderWallP(r.wall);
-    setNewText(""); setAddError("");
+    if (newStart) ensureNotifyPermission(newStart);
+    setNewText(""); setNewStart(""); setNewEnd(""); setAddError("");
   }
 
   function startEdit(it) {
-    setEditingId(it.id); setEditText(it.text); setEditCatId(it.categoryId); setEditError("");
+    setEditingId(it.id); setEditText(it.text); setEditCatId(it.categoryId);
+    setEditStart(it.startTime || ""); setEditEnd(it.endTime || ""); setEditError("");
   }
 
   function commitEdit() {
-    const r = editReminder(reminderWall, editingId, { categoryId: editCatId, text: editText, at: new Date().toISOString() });
+    const r = editReminder(reminderWall, editingId, {
+      categoryId: editCatId, text: editText, at: new Date().toISOString(),
+      startTime: editStart, endTime: editEnd
+    });
     if (r.error) { setEditError(r.error); return; }
     setReminderWallP(r.wall);
+    if (editStart) ensureNotifyPermission(editStart);
     setEditingId(null); setEditError("");
   }
 
@@ -228,6 +253,13 @@ export default function ReminderWallTab({ reminderWall, setReminderWallP, view =
               </select>
               <button onClick={addItem} className={btnPrimary + " shrink-0"}><Plus size={14} /> Add</button>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-[11px] text-zinc-500">Start</label>
+              <input type="time" value={newStart} onChange={(e) => setNewStart(e.target.value)} className={inputCls + " flex-1 min-w-0 py-1.5"} />
+              <label className="text-[11px] text-zinc-500">End</label>
+              <input type="time" value={newEnd} onChange={(e) => setNewEnd(e.target.value)} className={inputCls + " flex-1 min-w-0 py-1.5"} />
+            </div>
+            <p className="text-[11px] text-zinc-500">Both times are optional. A start time sends one alert when it comes around; the end time is only shown.</p>
             {addError && <p className="text-[11px] text-red-400">{COPY[addError]}</p>}
           </div>
 
@@ -247,6 +279,7 @@ export default function ReminderWallTab({ reminderWall, setReminderWallP, view =
               {shown.map((it) => {
                 const cat = categoryOf(it.categoryId);
                 const armed = isArmed("rmDel" + it.id);
+                const timeLabel = todoTimeLabel(it);
                 return (
                   <div key={it.id} className="rounded-xl border p-3 space-y-2" style={{ borderColor: cat.color, background: tint(cat.color) }}>
                     <div className="flex items-center gap-1.5 text-[11px] min-w-0" style={{ color: cat.color }}>
@@ -265,6 +298,12 @@ export default function ReminderWallTab({ reminderWall, setReminderWallP, view =
                         <select value={editCatId} onChange={(e) => setEditCatId(e.target.value)} className={selectCls + " w-full"}>
                           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <label className="text-[11px] text-zinc-500">Start</label>
+                          <input type="time" value={editStart} onChange={(e) => setEditStart(e.target.value)} className={inputCls + " flex-1 min-w-0 py-1.5"} />
+                          <label className="text-[11px] text-zinc-500">End</label>
+                          <input type="time" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} className={inputCls + " flex-1 min-w-0 py-1.5"} />
+                        </div>
                         {editError && <p className="text-[11px] text-red-400">{COPY[editError]}</p>}
                         <div className="flex items-center gap-1.5 justify-end">
                           <button onClick={() => setEditingId(null)} className="text-xs px-2 py-1 rounded text-zinc-400 hover:bg-zinc-800 inline-flex items-center gap-1"><X size={13} /> Cancel</button>
@@ -274,6 +313,7 @@ export default function ReminderWallTab({ reminderWall, setReminderWallP, view =
                     ) : (
                       <>
                         <p className="text-sm text-zinc-100 whitespace-pre-wrap break-words">{it.text}</p>
+                        {timeLabel && <p className="text-[11px] font-medium text-zinc-300 tabular-nums">{timeLabel}</p>}
                         <div className="flex flex-wrap items-center justify-between gap-1">
                           <span className="inline-flex min-w-0 items-center gap-1 text-[10px] text-zinc-500" title={addedLabel(it.createdAt)}>
                             <Clock size={11} className="shrink-0" />

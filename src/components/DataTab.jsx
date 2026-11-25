@@ -16,8 +16,9 @@ export default function DataTab({ tasks, categories, questions, weeks, reflectio
     setExportMsg({ text: "", error: false });
     // Date-stamped so repeat exports don't silently pile up as "(1)", "(2)"…
     const stamp = new Date().toISOString().slice(0, 10);
-    // v6 adds `reminderWall`. Older files simply lack it and import fine.
-    const payload = { version: 6, exportedAt: new Date().toISOString(), tasks, categories, questions, weeks, reflections, vision, reminderWall };
+    // v6 added `reminderWall`; v7 adds each wall item's optional start/end time.
+    // Older files simply lack the new fields and import fine.
+    const payload = { version: 7, exportedAt: new Date().toISOString(), tasks, categories, questions, weeks, reflections, vision, reminderWall };
     try {
       const where = await download(`ambitions-${stamp}.json`, JSON.stringify(payload, null, 2), "application/json");
       setExportMsg({ text: `Saved to ${where}`, error: false });

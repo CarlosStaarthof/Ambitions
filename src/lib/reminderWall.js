@@ -1,4 +1,4 @@
-import { nextColor } from "./time";
+import { nextColor, normalizeOptionalClock } from "./time";
 
 // The wall is its own small store. It is deliberately not the time-block
 // `categories` and not `tasks`: a post-it is captured context, not a calendar
@@ -84,9 +84,13 @@ export function normalizeReminderWall(value) {
     const createdAt = nonEmptyString(it.createdAt);
     const updatedAt = nonEmptyString(it.updatedAt);
     const doneAt = nonEmptyString(it.doneAt);
+    const startTime = normalizeOptionalClock(it.startTime);
+    const endTime = normalizeOptionalClock(it.endTime);
     if (createdAt) item.createdAt = createdAt;
     if (updatedAt) item.updatedAt = updatedAt;
     if (doneAt) item.doneAt = doneAt;
+    if (startTime) item.startTime = startTime;
+    if (endTime) item.endTime = endTime;
     items.push(item);
     seenItems.add(it.id);
   }
@@ -213,17 +217,27 @@ export function deleteCategory(wall, id) {
   };
 }
 
-export function addReminder(wall, { id, categoryId, text, at } = {}) {
+// Times are optional: a blank or malformed one is simply absent, never stored as null.
+// Keeping that rule here means every writer — the form, import and load — agrees.
+function withTimes(item, startTime, endTime) {
+  const start = normalizeOptionalClock(startTime);
+  const end = normalizeOptionalClock(endTime);
+  if (start) item.startTime = start; else delete item.startTime;
+  if (end) item.endTime = end; else delete item.endTime;
+  return item;
+}
+
+export function addReminder(wall, { id, categoryId, text, at, startTime, endTime } = {}) {
   const w = cloneWall(wall);
   const clean = trimmed(text);
   if (!clean) return { wall: w, error: "text-empty" };
   if (!w.categories.some((c) => c.id === categoryId)) return { wall: w, error: "category-missing" };
 
-  const item = { id, categoryId, text: clean, createdAt: at, updatedAt: at };
+  const item = withTimes({ id, categoryId, text: clean, createdAt: at, updatedAt: at }, startTime, endTime);
   return { wall: { categories: w.categories, items: [...w.items, item] }, error: undefined };
 }
 
-export function editReminder(wall, id, { categoryId, text, at } = {}) {
+export function editReminder(wall, id, { categoryId, text, at, startTime, endTime } = {}) {
   const w = cloneWall(wall);
   const index = w.items.findIndex((it) => it.id === id);
   if (index === -1) return { wall: w, error: "reminder-not-found" };
@@ -233,8 +247,21 @@ export function editReminder(wall, id, { categoryId, text, at } = {}) {
   if (!clean) return { wall: w, error: "text-empty" };
   if (!w.categories.some((c) => c.id === categoryId)) return { wall: w, error: "category-missing" };
 
-  w.items[index] = { ...w.items[index], categoryId, text: clean, updatedAt: at };
+  w.items[index] = withTimes({ ...w.items[index], categoryId, text: clean, updatedAt: at }, startTime, endTime);
   return { wall: { categories: w.categories, items: w.items }, error: undefined };
+}
+
+export function hasTodoTime(item) {
+  return !!(item && (normalizeOptionalClock(item.startTime) || normalizeOptionalClock(item.endTime)));
+}
+
+export function todoTimeLabel(item) {
+  const start = normalizeOptionalClock(item && item.startTime);
+  const end = normalizeOptionalClock(item && item.endTime);
+  if (start && end) return `${start}–${end}`;
+  if (start) return `from ${start}`;
+  if (end) return `until ${end}`;
+  return "";
 }
 
 export function markDone(wall, id, at) {

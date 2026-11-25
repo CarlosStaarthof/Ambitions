@@ -235,7 +235,7 @@ describe("reminder CRUD", () => {
   it("leaves no trace of a deleted reminder in a wall export", () => {
     const input = wallOf([CAT("home", "Home")], [ITEM("gone", "home", "gone"), ITEM("stay", "home", "stay")]);
     const { wall } = deleteReminder(input, "gone");
-    const envelope = JSON.parse(JSON.stringify({ version: 6, reminderWall: wall }));
+    const envelope = JSON.parse(JSON.stringify({ version: 7, reminderWall: wall }));
     expect(envelope.reminderWall.items.map((i) => i.id)).toEqual(["stay"]);
     expect(JSON.stringify(envelope)).not.toContain("gone");
   });
@@ -316,7 +316,9 @@ describe("structural guarantees (source-read)", () => {
   });
 
   // AC-2 / AC-15 — the wall cannot touch weeks, tasks, settings or the network.
-  it("gives the wall module and view no route to time-block data, notifications or AI", () => {
+  // Feature 21 lets the view ask for notification permission at the moment a to-do
+  // start time is set, but scheduling still happens only in App through syncReminders.
+  it("gives the wall module and view no route to time-block data, AI or the scheduler", () => {
     const lib = read("../../src/lib/reminderWall.js");
     expect(lib).not.toMatch(/localforage|from "\.\/storage"|react|document|window/);
     expect(lib).not.toMatch(/setTasksP|setWeeksP|setCategoriesP|setSettingsP/);
@@ -324,7 +326,7 @@ describe("structural guarantees (source-read)", () => {
 
     const view = read("../../src/components/ReminderWallTab.jsx");
     expect(view).not.toMatch(/setTasksP|setWeeksP|setCategoriesP|setSettingsP/);
-    expect(view).not.toMatch(/callAI|aiEnabled|aiErrorText|lib\/ai|notify|@capacitor|fetch\(/);
+    expect(view).not.toMatch(/callAI|aiEnabled|aiErrorText|lib\/ai|@capacitor|fetch\(|LocalNotifications|syncReminders|schedule\(|cancel\(/);
     expect(view).toMatch(/useArmed/);
     expect(view).not.toMatch(/window\.confirm/);
   });
@@ -340,11 +342,11 @@ describe("structural guarantees (source-read)", () => {
     expect(view).not.toMatch(/window\.confirm/);
   });
 
-  // AC-14 — the envelope carries version 6 and the wall.
-  it("puts the wall in the version 6 export envelope and merges it on import", () => {
+  // AC-14 — the envelope carries version 7 and the wall.
+  it("puts the wall in the version 7 export envelope and merges it on import", () => {
     const data = read("../../src/components/DataTab.jsx");
     const payload = data.split("\n").find((l) => l.includes("const payload ="));
-    expect(payload).toMatch(/version:\s*6\b/);
+    expect(payload).toMatch(/version:\s*7\b/);
     expect(payload).toMatch(/reminderWall/);
     expect(data).toMatch(/mergeImportedReminderWall\(reminderWall, pendingImport\.reminderWall\)/);
     expect(data).toMatch(/normalizeReminderWall\(mergeImportedReminderWall/);

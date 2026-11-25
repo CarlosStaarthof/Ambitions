@@ -275,7 +275,7 @@ describe("what this feature did not change", () => {
   it("keeps the export envelope free of settings and notification reminders", () => {
     const src = read("../../src/components/DataTab.jsx");
     const payload = src.split("\n").find((l) => l.includes("const payload ="));
-    expect(payload).toMatch(/version:\s*6\b/);
+    expect(payload).toMatch(/version:\s*7\b/);
     expect(payload).toMatch(/\breminderWall\b/);
     expect(payload).not.toMatch(/\bsettings\b/);
     expect(payload).not.toMatch(/\breminders\b/);

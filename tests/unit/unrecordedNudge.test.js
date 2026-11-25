@@ -209,10 +209,10 @@ describe("what this feature did not change", () => {
     expect([...src.matchAll(/from "([^"]+)"/g)].map((m) => m[1]).sort()).toEqual(["./reminders", "./seed"]);
   });
 
-  it("leaves the export at version 6 without settings", () => {
+  it("leaves the export at version 7 without settings", () => {
     const src = read("../../src/components/DataTab.jsx");
     const payload = src.split("\n").find((l) => l.includes("const payload ="));
-    expect(payload).toMatch(/version:\s*6\b/);
+    expect(payload).toMatch(/version:\s*7\b/);
     expect(payload).not.toMatch(/\bsettings\b/);
   });
 });

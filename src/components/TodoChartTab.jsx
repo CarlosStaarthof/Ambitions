@@ -1,6 +1,6 @@
 import { Check, CheckCircle2, Clock, Inbox, Undo2 } from "lucide-react";
 import { card } from "../lib/ui";
-import { UNCATEGORIZED_COLOR, canUndoReminder, chartGroups, chartSummary, createdDate, markDone, reopenReminder } from "../lib/reminderWall";
+import { UNCATEGORIZED_COLOR, canUndoReminder, chartGroups, chartSummary, createdDate, markDone, reopenReminder, todoTimeLabel } from "../lib/reminderWall";
 
 const tint = (color) => (/^#[0-9a-fA-F]{6}$/.test(color) ? color + "22" : "rgba(255,255,255,0.04)");
 const dateLabel = (iso) => {
@@ -124,6 +124,7 @@ export default function TodoChartTab({ reminderWall, setReminderWallP, view = "o
                   style={{ borderLeft: `4px solid ${cat.color}`, background: tint(cat.color) }}
                 >
                   <p className="flex-1 whitespace-pre-wrap break-words text-sm leading-snug text-zinc-100">{it.text}</p>
+                  {todoTimeLabel(it) && <p className="text-[11px] font-medium tabular-nums text-zinc-300">{todoTimeLabel(it)}</p>}
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="inline-flex min-w-0 items-center gap-1 text-[10px] text-zinc-500" title={addedLabel(it.createdAt)}>
                       <Clock size={11} className="shrink-0" />
