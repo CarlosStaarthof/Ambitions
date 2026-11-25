@@ -5,6 +5,7 @@ import { mondayOf, pad } from "./lib/time";
 import { NONE } from "./lib/providers";
 import { card } from "./lib/ui";
 import { REMINDER_SOURCES, HORIZON, plannedReminders, filterQuietOccurrences } from "./lib/reminders";
+import { unrecordedNudge, normalizeUnrecorded } from "./lib/nudge";
 import { syncReminders } from "./lib/notify";
 import AppMenu from "./components/AppMenu";
 import WeekTab from "./components/WeekTab";
@@ -57,8 +58,25 @@ export default function App() {
     // Nothing is derived from a store we could not read — not even a notification.
     if (loading || storageError) return;
     const sync = () => {
-      const plan = filterQuietOccurrences(plannedReminders(REMINDER_SOURCES, settings, new Date(), HORIZON, { reflections, questions }), settings.quietHours);
+      const now = new Date();
+      const nudge = unrecordedNudge(now, weeks, settings.unrecorded);
+      const planned = plannedReminders(REMINDER_SOURCES, settings, now, HORIZON, { reflections, questions });
+      const plan = filterQuietOccurrences(nudge ? [...planned, nudge.entry] : planned, settings.quietHours);
       syncReminders(plan);
+      // Mark the gap only once the nudge is actually in the filtered plan: a nudge
+      // silenced by quiet hours must be able to fire after the window, not count as
+      // sent. While its scheduled time is still ahead, the same entry stays in the
+      // plan on every re-run so reconciliation cannot cancel it.
+      if (nudge && !nudge.alreadyMarked && plan.some((p) => p.id === nudge.entry.id)) {
+        store.setSettingsP((prev) => ({
+          ...prev,
+          unrecorded: {
+            ...normalizeUnrecorded(prev.unrecorded),
+            lastNudgedGapStart: nudge.gapKey,
+            lastNudgedAt: nudge.entry.at.toISOString()
+          }
+        }));
+      }
     };
     sync();
     const onVis = () => { if (document.visibilityState === "visible") sync(); };

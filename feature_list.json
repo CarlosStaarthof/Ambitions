@@ -306,7 +306,7 @@
       "id": 20,
       "name": "unrecorded-nudge",
       "title": "Unrecorded-time nudge notification",
-      "status": "pending",
+      "status": "in_review",
       "spec": "specs/features/020-unrecorded-nudge.md",
       "depends_on": [
         19

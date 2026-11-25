@@ -4,6 +4,7 @@ import { card, selectCls, inputCls, btnGhost } from "../lib/ui";
 import { PROVIDERS, NONE, providerById } from "../lib/providers";
 import { fetchModels, aiErrorText } from "../lib/ai";
 import { REMINDER_SOURCES } from "../lib/reminders";
+import { NUDGE_GAP_OPTIONS, normalizeUnrecorded } from "../lib/nudge";
 import { normalizeQuietHours } from "../lib/time";
 import { clampLongPressMs, LONG_PRESS_MIN, LONG_PRESS_MAX, LONG_PRESS_STEP } from "../lib/seed";
 import { notifySupported, notifyPermission, requestNotifyPermission } from "../lib/notify";
@@ -45,9 +46,14 @@ function RemindersCard({ store }) {
   const [blocked, setBlocked] = useState(false);
   const reminders = (store.settings && store.settings.reminders) || {};
   const quietHours = normalizeQuietHours(store.settings && store.settings.quietHours);
+  const unrecorded = normalizeUnrecorded(store.settings && store.settings.unrecorded);
   const setQuietHours = (patch) => store.setSettingsP((prev) => ({
     ...prev,
     quietHours: normalizeQuietHours({ ...(prev.quietHours || {}), ...patch })
+  }));
+  const setUnrecorded = (patch) => store.setSettingsP((prev) => ({
+    ...prev,
+    unrecorded: normalizeUnrecorded({ ...normalizeUnrecorded(prev.unrecorded), ...patch })
   }));
 
   // Reading the permission is instant on device and a no-op on web, so the toggles
@@ -70,6 +76,15 @@ function RemindersCard({ store }) {
     write(id, true);
   }
 
+  async function toggleNudge(on) {
+    if (!on) { setBlocked(false); setUnrecorded({ enabled: false }); return; }
+    let p = perm;
+    if (p !== "granted") { p = await requestNotifyPermission(); setPerm(p); }
+    if (p !== "granted") { setBlocked(true); return; }
+    setBlocked(false);
+    setUnrecorded({ enabled: true });
+  }
+
   return (
     <div className={card + " p-4 space-y-3"}>
       <div className="flex items-center gap-2 text-sm font-medium"><Bell size={16} className="text-amber-400" /> Notifications</div>
@@ -89,6 +104,35 @@ function RemindersCard({ store }) {
           <p className="text-[11px] text-zinc-500 leading-relaxed">{s.body}</p>
         </div>
       ))}
+
+      <div className="space-y-2 pt-3 border-t border-zinc-800">
+        <label className={"flex items-center justify-between gap-3 text-sm text-zinc-300 " + (supported ? "cursor-pointer" : "opacity-50")}>
+          <span className="min-w-0">Unrecorded time</span>
+          <input
+            type="checkbox"
+            disabled={!supported}
+            checked={unrecorded.enabled}
+            onChange={(e) => toggleNudge(e.target.checked)}
+            className="h-4 w-4 accent-amber-500 shrink-0 disabled:opacity-50"
+          />
+        </label>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-zinc-300">No recorded block for</span>
+          <select
+            value={unrecorded.gapMinutes}
+            disabled={!supported || !unrecorded.enabled}
+            onChange={(e) => setUnrecorded({ gapMinutes: Number(e.target.value) })}
+            className={selectCls + " disabled:opacity-50"}
+          >
+            {NUDGE_GAP_OPTIONS.map((m) => (
+              <option key={m} value={m}>{m === 60 ? "1 hour" : m === 90 ? "1.5 hours" : "2 hours"}</option>
+            ))}
+          </select>
+        </div>
+        <p className="text-[11px] text-zinc-500 leading-relaxed">
+          Nudges once when the chosen stretch has no recorded block, then stays quiet until you record one. Silence still applies during quiet hours.
+        </p>
+      </div>
 
       <div className="space-y-2 pt-3 border-t border-zinc-800">
         <label className="flex items-center justify-between gap-3 text-sm text-zinc-300 cursor-pointer">

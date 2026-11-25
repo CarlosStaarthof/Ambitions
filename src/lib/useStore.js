@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { loadKey, saveKey } from "./storage";
 import { SEED_TASKS, SEED_CATEGORIES, SEED_QUESTIONS, normalizeModel, backfillOpenWeeks, mergeSettings, loadDecision } from "./seed";
 import { mondayOf, isoDate, normalizeQuietHours } from "./time";
+import { normalizeUnrecorded } from "./nudge";
 import { NONE, PROVIDERS } from "./providers";
 import { secureGet, secureSet, secureRemove, aiKeyName } from "./secureStore";
 import { emptyReminderWall, normalizeReminderWall } from "./reminderWall";
@@ -23,6 +24,10 @@ export const DEFAULT_SETTINGS = {
   // One local window silences every source. It wraps midnight by default, so the
   // start is included and the end is not.
   quietHours: { enabled: true, start: "23:00", end: "07:00" },
+  // Optional nudge when a chosen stretch has no recorded block. Off by default;
+  // `lastNudged*` is state, not a preference, but it lives here because settings is
+  // one key and never part of the export.
+  unrecorded: { enabled: false, gapMinutes: 60, lastNudgedGapStart: null, lastNudgedAt: null },
   // How long a finger must rest on a filled week cell before the note gesture
   // starts, in milliseconds. A user setting, never week data. Absent on older
   // installs, so mergeSettings fills it on load.
@@ -108,7 +113,11 @@ export function useStore() {
       // goes a level deeper than a spread, so a stored `reminders.reflection` is not
       // erased by a source a later feature adds.
       const merged = mergeSettings(DEFAULT_SETTINGS, s.value);
-      const next = { ...merged, quietHours: normalizeQuietHours(merged.quietHours) };
+      const next = {
+        ...merged,
+        quietHours: normalizeQuietHours(merged.quietHours),
+        unrecorded: normalizeUnrecorded(merged.unrecorded)
+      };
       setSettings(next);
       if (legacy && Object.keys(legacy).length) saveKey("settings", next);
 
@@ -126,7 +135,11 @@ export function useStore() {
   const setReminderWallP = (u) => setReminderWall((prev) => { const n = typeof u === "function" ? u(prev) : u; saveKey("reminderWall", n); return n; });
   const setSettingsP = (u) => setSettings((prev) => {
     const n = typeof u === "function" ? u(prev) : u;
-    const next = { ...n, quietHours: normalizeQuietHours(n.quietHours) };
+    const next = {
+      ...n,
+      quietHours: normalizeQuietHours(n.quietHours),
+      unrecorded: normalizeUnrecorded(n.unrecorded)
+    };
     if (next.ai && "keys" in next.ai) delete next.ai.keys;   // never let a key reach localForage
     saveKey("settings", next);
     return next;

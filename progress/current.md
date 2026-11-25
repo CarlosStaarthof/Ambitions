@@ -40,14 +40,32 @@ are `done`.
 - No stored-shape change beyond `settings`, so no export version bump (still `version:
   6`, `settings` never exported).
 
+## Round 2 — unrecorded-time nudge (feature 20, in_review)
+
+- Spec `specs/features/020-unrecorded-nudge.md` written and approved by the owner's
+  four requests; implementation report `progress/impl_unrecorded-nudge.md`.
+- `src/lib/nudge.js`: pure `normalizeUnrecorded`, `nudgeGapText`,
+  `lastRecordedBlockEnd`, `unrecordedNudge`; scans stored weeks for the latest painted
+  30-min block and schedules the nudge at `lastRecordedEnd + gap` (or immediately when
+  overdue / never recorded).
+- One nudge per gap via `settings.unrecorded.lastNudgedGapStart` + `lastNudgedAt`;
+  recording a block moves the marker. A nudge silenced by quiet hours is not marked.
+- `notificationIdFor(source, at, key?)` keeps frozen reflection ids; the nudge ids key
+  on the gap marker.
+- Settings → Notifications: Unrecorded time toggle, 1 h / 1.5 h / 2 h select, copy.
+- `App.jsx` merges the nudge into the plan before `filterQuietOccurrences` and
+  persists the marker only when it survives the quiet filter.
+- Tests: `tests/unit/unrecordedNudge.test.js` (23). Gate: 14 files, 320 tests;
+  `bash init.sh` → `[OK]`.
+- No export version bump: only `settings` changed and it is not exported.
+
 ## Next round (planned)
 
-- 20 `unrecorded-nudge`: write `specs/features/020-unrecorded-nudge.md`, then implement.
-  Needs pure gap detection over `weeks` cells (30-min slots), a per-gap dedupe so one
-  nudge fires per empty run and resets when a block is recorded, a settings group
-  (`unrecorded: { enabled, gapMinutes }`) with default off and gap 60, and a
-  `REMINDER_SOURCES` descriptor whose occurrences are derived from the current week
-  cells. Route it through the existing quiet-hours filter and data-change rescheduling.
+- 21 `todo-times`: write `specs/features/021-todo-times.md`, then implement. Optional
+  start/end time per wall item; a start time schedules a local notification (through the
+  existing quiet filter and reschedule deps), and the export envelope moves to v7.
+- 22 `morning-digest`: write spec, then implement the 08:00 editable/toggle digest of
+  open wall items with no time.
 - Device checks accumulate for the end of the goal (delivery with app backgrounded).
 
 ## Still open from the earlier goal

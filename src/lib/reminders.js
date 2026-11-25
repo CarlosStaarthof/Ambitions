@@ -102,9 +102,12 @@ function hash32(s) {
 
 // Stable id for (source, calendar day). Deriving it rather than storing it is what
 // lets the plan be recomputed from scratch after a reboot and still line up with
-// whatever the OS is already holding.
-export function notificationIdFor(sourceId, at) {
-  return hash32(`${sourceId}|${isoDate(at instanceof Date ? at : new Date(at))}`);
+// whatever the OS is already holding. A source whose occurrences are not one per
+// day passes a `key` instead, so two occurrences on the same day cannot collide;
+// with two arguments the value is exactly what it always was.
+export function notificationIdFor(sourceId, at, key) {
+  const tag = key == null ? isoDate(at instanceof Date ? at : new Date(at)) : String(key);
+  return hash32(`${sourceId}|${tag}`);
 }
 
 // Reconcile the derived plan against what the OS actually holds. Ids encode the
