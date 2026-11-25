@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { loadKey, saveKey } from "./storage";
 import { SEED_TASKS, SEED_CATEGORIES, SEED_QUESTIONS, normalizeModel, backfillOpenWeeks, mergeSettings, loadDecision } from "./seed";
-import { mondayOf, isoDate } from "./time";
+import { mondayOf, isoDate, normalizeQuietHours } from "./time";
 import { NONE, PROVIDERS } from "./providers";
 import { secureGet, secureSet, secureRemove, aiKeyName } from "./secureStore";
 import { emptyReminderWall, normalizeReminderWall } from "./reminderWall";
@@ -20,6 +20,9 @@ import { normalizeVision } from "./vision";
 export const DEFAULT_SETTINGS = {
   ai: { enabled: false, provider: NONE, model: null },
   reminders: { reflection: { enabled: false } },
+  // One local window silences every source. It wraps midnight by default, so the
+  // start is included and the end is not.
+  quietHours: { enabled: true, start: "23:00", end: "07:00" },
   // How long a finger must rest on a filled week cell before the note gesture
   // starts, in milliseconds. A user setting, never week data. Absent on older
   // installs, so mergeSettings fills it on load.
@@ -105,8 +108,9 @@ export function useStore() {
       // goes a level deeper than a spread, so a stored `reminders.reflection` is not
       // erased by a source a later feature adds.
       const merged = mergeSettings(DEFAULT_SETTINGS, s.value);
-      setSettings(merged);
-      if (legacy && Object.keys(legacy).length) saveKey("settings", merged);
+      const next = { ...merged, quietHours: normalizeQuietHours(merged.quietHours) };
+      setSettings(next);
+      if (legacy && Object.keys(legacy).length) saveKey("settings", next);
 
       setLoading(false);
     })();
@@ -122,9 +126,10 @@ export function useStore() {
   const setReminderWallP = (u) => setReminderWall((prev) => { const n = typeof u === "function" ? u(prev) : u; saveKey("reminderWall", n); return n; });
   const setSettingsP = (u) => setSettings((prev) => {
     const n = typeof u === "function" ? u(prev) : u;
-    if (n.ai && "keys" in n.ai) delete n.ai.keys;   // never let a key reach localForage
-    saveKey("settings", n);
-    return n;
+    const next = { ...n, quietHours: normalizeQuietHours(n.quietHours) };
+    if (next.ai && "keys" in next.ai) delete next.ai.keys;   // never let a key reach localForage
+    saveKey("settings", next);
+    return next;
   });
 
   // Keys go straight to secure storage; React state mirrors them for the current session.

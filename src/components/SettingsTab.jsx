@@ -4,6 +4,7 @@ import { card, selectCls, inputCls, btnGhost } from "../lib/ui";
 import { PROVIDERS, NONE, providerById } from "../lib/providers";
 import { fetchModels, aiErrorText } from "../lib/ai";
 import { REMINDER_SOURCES } from "../lib/reminders";
+import { normalizeQuietHours } from "../lib/time";
 import { clampLongPressMs, LONG_PRESS_MIN, LONG_PRESS_MAX, LONG_PRESS_STEP } from "../lib/seed";
 import { notifySupported, notifyPermission, requestNotifyPermission } from "../lib/notify";
 import DataTab from "./DataTab";
@@ -43,6 +44,11 @@ function RemindersCard({ store }) {
   const [perm, setPerm] = useState("prompt");
   const [blocked, setBlocked] = useState(false);
   const reminders = (store.settings && store.settings.reminders) || {};
+  const quietHours = normalizeQuietHours(store.settings && store.settings.quietHours);
+  const setQuietHours = (patch) => store.setSettingsP((prev) => ({
+    ...prev,
+    quietHours: normalizeQuietHours({ ...(prev.quietHours || {}), ...patch })
+  }));
 
   // Reading the permission is instant on device and a no-op on web, so the toggles
   // render in their stored position straight away rather than behind a spinner.
@@ -66,7 +72,7 @@ function RemindersCard({ store }) {
 
   return (
     <div className={card + " p-4 space-y-3"}>
-      <div className="flex items-center gap-2 text-sm font-medium"><Bell size={16} className="text-amber-400" /> Reminders</div>
+      <div className="flex items-center gap-2 text-sm font-medium"><Bell size={16} className="text-amber-400" /> Notifications</div>
 
       {REMINDER_SOURCES.map((s) => (
         <div key={s.id} className="space-y-1">
@@ -83,6 +89,24 @@ function RemindersCard({ store }) {
           <p className="text-[11px] text-zinc-500 leading-relaxed">{s.body}</p>
         </div>
       ))}
+
+      <div className="space-y-2 pt-3 border-t border-zinc-800">
+        <label className="flex items-center justify-between gap-3 text-sm text-zinc-300 cursor-pointer">
+          <span>Quiet hours</span>
+          <input
+            type="checkbox"
+            checked={quietHours.enabled}
+            onChange={(e) => setQuietHours({ enabled: e.target.checked })}
+            className="h-4 w-4 accent-amber-500 shrink-0"
+          />
+        </label>
+        <div className="flex items-center gap-2">
+          <input type="time" value={quietHours.start} disabled={!quietHours.enabled} onChange={(e) => setQuietHours({ start: e.target.value })} className={inputCls + " flex-1 disabled:opacity-50"} />
+          <span className="text-xs text-zinc-500 shrink-0">to</span>
+          <input type="time" value={quietHours.end} disabled={!quietHours.enabled} onChange={(e) => setQuietHours({ end: e.target.value })} className={inputCls + " flex-1 disabled:opacity-50"} />
+        </div>
+        <p className="text-[11px] text-zinc-500 leading-relaxed">All notifications are silenced between these local times, including reminders, and the window may cross midnight.</p>
+      </div>
 
       {!supported && <p className="text-[11px] text-zinc-500">Reminders need the Android app. A browser tab cannot schedule them.</p>}
       {blocked && <p className="text-[11px] text-red-400">Notifications are blocked for Ambitions. Turn them back on in Settings → Apps → Ambitions → Notifications, then try again.</p>}

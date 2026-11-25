@@ -1,57 +1,56 @@
 # Current session
 
 **Date:** 2026-11-25
-**Goal (owner):** four requests — (1) long-press note must always work on the week
-grid; (2) a Settings language choice for the app and for the AI's understanding /
-answers; (3) undo a done to-do within 24 hours; (4) main menu order Plan & Balance,
-To-Do's Chart, Vision Board, Records, Settings.
-**This round:** round 2 of 5 — request (3), undo a done to-do within 24 hours.
-**In flight:** nothing. Feature 16 `todo-undo-window` is `done` (review
-`progress/review_todo-undo-window.md`); feature 15 is `in_review`.
+**Goal (owner):** Ambitions — Notifications v2. In Settings > Notifications:
+1. Unrecorded-time nudge: toggle, gap 1h default (1h/1.5h/2h), one nudge per gap,
+   message adapts, resets when a block is recorded.
+2. Quiet hours 23:00–07:00 editable, suppress all notifications.
+3. To-dos get optional start and end time; start time schedules a local notification.
+4. Morning digest 08:00 editable + toggle, listing open to-dos with no time.
+Use Capacitor Local Notifications, reschedule on app open and data change, ask Android
+13+ permission, keep the monthly reflection reminder, bump the export version if the
+to-do schema changes.
 
-Features 11, 12, 13 and 15 remain `in_review` (device checks pending). 14 and 16 are
-`done`.
+**Work split (owner goal → features):**
+- 19 `notifications-preferences` — **done** (round 1). Quiet hours + filtered plan +
+  data-change rescheduling. Review: `progress/review_notifications-preferences.md`.
+- 20 `unrecorded-nudge` — next (round 2). Spec to be written first.
+- 21 `todo-times` — start/end on wall items, start alert, export v7.
+- 22 `morning-digest` — open to-dos with no time, 08:00 editable + toggle.
 
-## Round 2 — 24-hour undo of a done to-do (feature 16, done)
+Features 11, 12, 13 and 15 remain `in_review` (device checks pending). 14, 16 and 19
+are `done`.
 
-- `src/lib/reminderWall.js`: `UNDO_WINDOW_MS`, `canUndoReminder(item, now)` (strict
-  `< 24 h`, `now` as Date or ISO), `reopenReminder(wall, id, now)` (removes `doneAt` by
-  destructuring, stamps `updatedAt` as an ISO string, errors `reminder-not-found` /
-  `not-archived` / `undo-expired`). No stored deadline; expiry derived from `doneAt`.
-- `src/components/TodoChartTab.jsx`: Done view shows `Undo` only while the window is
-  open and `Undo closed` after; Undo persists through `setReminderWallP`.
-- `src/App.jsx`: passes the ticking `now` to `TodoChartTab`.
-- Tests: `tests/unit/todoUndoWindow.test.js` (15 tests). Report:
-  `progress/impl_todo-undo-window.md`; review: `progress/review_todo-undo-window.md`.
-- Gate: `npm test --silent` → 12 files, 277 tests passed; `bash init.sh` → `[OK]`.
-- Not a stored-shape change, so no migration and no export version bump.
+## Round 1 — notification preferences and quiet hours (feature 19, done)
 
-## Round 1 — long-press opens a note with a brush selected (feature 15, in_review)
-
-- Root cause: feature 12 gated the gesture on `brush == null`, and a brush is never
-  cleared when the user switches categories. `WeekTab.jsx` now starts the hold for
-  any pointer unless the note dialog is open; the release tap that ends a hold is
-  swallowed so it cannot paint; touch/pen never paint on the mouse-compatibility path.
-- `SettingsTab.jsx` copy no longer claims the gesture needs no brush.
-- Spec 012 amended with the owner ruling of 2026-11-25. New spec
-  `specs/features/015-week-note-longpress.md`.
-- Tests: `tests/unit/notes.test.js` updated; new `tests/unit/weekNoteLongPress.test.js`
-  (9 tests). Report: `progress/impl_week-note-longpress.md`.
-- Device check AC-10 still pending: hold with a task selected opens the note and leaves
-  the block unchanged; the next tap paints.
+- `src/lib/time.js`: `normalizeClock`, `minutesOfClock`, `normalizeQuietHours`,
+  `inQuietHours` (pure, start inclusive / end exclusive, wrap-safe, disabled and
+  `start === end` mean no window).
+- `src/lib/reminders.js`: `filterQuietOccurrences(plan, quietHours)` — new array, order
+  kept, input untouched. Module still imports only `./time`.
+- `src/lib/useStore.js`: `DEFAULT_SETTINGS.quietHours = { enabled: true, start:
+  "23:00", end: "07:00" }`; normalized on load and on every `setSettingsP` write.
+- `src/components/SettingsTab.jsx`: card renamed Notifications; Quiet hours switch +
+  two `type="time"` inputs; copy says all notifications are silenced in the window and
+  it may cross midnight.
+- `src/App.jsx`: plan filtered through `filterQuietOccurrences` before `syncReminders`;
+  effect re-runs on `reminderWall`/`weeks` in addition to the existing deps.
+- Tests: `tests/unit/quietHours.test.js` (20). Gate: `npm test --silent` → 13 files,
+  297 tests; `bash init.sh` → `[OK]`.
+- No stored-shape change beyond `settings`, so no export version bump (still `version:
+  6`, `settings` never exported).
 
 ## Next round (planned)
 
-- 18 `menu-order` — reorder `AppMenu.ITEMS` only to Plan & Balance, To-Do's Chart,
-  Vision Board, Records, Settings; labels and section ids unchanged. Spec to be written
-  first (small, ~5 ACs).
+- 20 `unrecorded-nudge`: write `specs/features/020-unrecorded-nudge.md`, then implement.
+  Needs pure gap detection over `weeks` cells (30-min slots), a per-gap dedupe so one
+  nudge fires per empty run and resets when a block is recorded, a settings group
+  (`unrecorded: { enabled, gapMinutes }`) with default off and gap 60, and a
+  `REMINDER_SOURCES` descriptor whose occurrences are derived from the current week
+  cells. Route it through the existing quiet-hours filter and data-change rescheduling.
+- Device checks accumulate for the end of the goal (delivery with app backgrounded).
 
-## Open question carried to the owner (feature 17)
+## Still open from the earlier goal
 
-Request (2) cannot be implemented without the owner's decisions:
-1. Which languages must the app ship with (a fixed, translated list)?
-2. Is the proposed fixed AI answer template approved, and on which surfaces (Balance
-   coach, Guiding bounce, note polish)?
-
-The note-polish surface has its own constraints, so the template must be specified per
-surface before any prompt changes. Do not guess the language list or the template.
+- Feature 17 `app-language` remains blocked on the owner's language list and AI answer
+  template. Do not guess either.

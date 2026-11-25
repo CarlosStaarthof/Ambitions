@@ -95,3 +95,47 @@ export function parseHM(text) {
   const n = Number(t.replace(",", "."));
   return isNaN(n) ? null : n;
 }
+
+// A clock is a preference, not schedule data: repair the stored value rather than
+// rejecting it, so an old or hand-edited settings object can never break the UI.
+export function normalizeClock(value, fallback) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(value == null ? "" : value).trim());
+  if (!m) return fallback;
+  const h = Math.min(23, Math.max(0, parseInt(m[1], 10)));
+  const min = Math.min(59, Math.max(0, parseInt(m[2], 10)));
+  return `${pad(h)}:${pad(min)}`;
+}
+
+// Null, not a clamp: callers that need a comparable minute must be able to tell a
+// real clock from a repaired one.
+export function minutesOfClock(value) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(value == null ? "" : value).trim());
+  if (!m) return null;
+  const h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+
+const QUIET_DEFAULT = { enabled: true, start: "23:00", end: "07:00" };
+
+export function normalizeQuietHours(value) {
+  const q = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return {
+    enabled: q.enabled !== false,
+    start: normalizeClock(q.start, QUIET_DEFAULT.start),
+    end: normalizeClock(q.end, QUIET_DEFAULT.end)
+  };
+}
+
+// The start minute is inside the window and the end minute is outside it, so a
+// 23:00–07:00 window silences 23:00 but lets the 07:00 reminder through.
+export function inQuietHours(at, quietHours) {
+  const q = normalizeQuietHours(quietHours);
+  if (!q.enabled) return false;
+  const start = minutesOfClock(q.start), end = minutesOfClock(q.end);
+  if (start == null || end == null || start === end) return false;
+  const d = at instanceof Date ? at : new Date(at);
+  if (isNaN(d.getTime())) return false;
+  const minutes = d.getHours() * 60 + d.getMinutes();
+  return start < end ? minutes >= start && minutes < end : minutes >= start || minutes < end;
+}

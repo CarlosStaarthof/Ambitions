@@ -288,6 +288,57 @@
       ],
       "why": "Owner request: the drawer currently reads Plan & Balance, Records, To-Do's Chart, Vision Board, Settings. It must read Plan & Balance, To-Do's Chart, Vision Board, Records, Settings. Labels and section ids stay as they are; only the order changes.",
       "acceptance": []
+    },
+    {
+      "id": 19,
+      "name": "notifications-preferences",
+      "title": "Notification preferences and quiet hours",
+      "status": "done",
+      "spec": "specs/features/019-notifications-preferences.md",
+      "depends_on": [
+        3
+      ],
+      "why": "Notifications v2 adds three sources (unrecorded-time nudge, to-do start alert, morning digest) beside the monthly reflection. They all need one editable quiet window that suppresses them and a reschedule whenever the data behind them changes.",
+      "acceptance": [],
+      "review": "progress/review_notifications-preferences.md"
+    },
+    {
+      "id": 20,
+      "name": "unrecorded-nudge",
+      "title": "Unrecorded-time nudge notification",
+      "status": "pending",
+      "spec": "specs/features/020-unrecorded-nudge.md",
+      "depends_on": [
+        19
+      ],
+      "why": "Owner request: once a configurable run of empty 30-minute blocks (1h default; 1h/1.5h/2h) precedes now, one nudge fires per gap and resets when a block is recorded. The message adapts to the gap length.",
+      "acceptance": []
+    },
+    {
+      "id": 21,
+      "name": "todo-times",
+      "title": "Optional start and end time on a to-do with a start alert",
+      "status": "pending",
+      "spec": "specs/features/021-todo-times.md",
+      "depends_on": [
+        11,
+        19
+      ],
+      "why": "Owner request: a to-do may carry an optional start and end time (never required). A to-do with a start time gets a local notification at that start time. The to-do schema changes, so the export version must be bumped.",
+      "acceptance": []
+    },
+    {
+      "id": 22,
+      "name": "morning-digest",
+      "title": "Morning digest of open to-dos with no time",
+      "status": "pending",
+      "spec": "specs/features/022-morning-digest.md",
+      "depends_on": [
+        19,
+        21
+      ],
+      "why": "Owner request: an editable morning digest (default 08:00, toggle) lists the open to-dos that have no start time.",
+      "acceptance": []
     }
   ]
 }

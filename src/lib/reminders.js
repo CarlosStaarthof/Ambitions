@@ -1,4 +1,4 @@
-import { isoDate } from "./time";
+import { isoDate, inQuietHours } from "./time";
 
 // Pure schedule maths for local reminders. No Capacitor, no storage, no React —
 // every function here is a function of a supplied `from` date, never of `new Date()`,
@@ -84,6 +84,12 @@ export function plannedReminders(sources, settings, from, count = HORIZON, ctx =
     }
   }
   return out.sort((a, b) => a.at.getTime() - b.at.getTime());
+}
+
+// Suppression means "do not schedule", not "move later": a silenced occurrence is
+// dropped, while the order of everything else is left exactly as planned.
+export function filterQuietOccurrences(plan, quietHours) {
+  return (plan || []).filter((p) => !inQuietHours(p && p.at, quietHours));
 }
 
 // FNV-1a. Android notification ids are signed 32-bit ints, so the hash is folded

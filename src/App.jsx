@@ -4,7 +4,7 @@ import { useStore } from "./lib/useStore";
 import { mondayOf, pad } from "./lib/time";
 import { NONE } from "./lib/providers";
 import { card } from "./lib/ui";
-import { REMINDER_SOURCES, HORIZON, plannedReminders } from "./lib/reminders";
+import { REMINDER_SOURCES, HORIZON, plannedReminders, filterQuietOccurrences } from "./lib/reminders";
 import { syncReminders } from "./lib/notify";
 import AppMenu from "./components/AppMenu";
 import WeekTab from "./components/WeekTab";
@@ -50,17 +50,21 @@ export default function App() {
   // Reminder schedules are re-derived, never remembered: Android drops pending
   // alarms on reboot, force-stop and clock changes, so the whole plan is recomputed
   // from today and reconciled against the OS on load and on every return to the
-  // foreground. syncReminders is a no-op on web and when permission is not granted.
-  const { loading, storageError, settings, reflections, questions } = store;
+  // foreground. Quiet hours filter the plan before it can reach the OS. The plan also
+  // depends on the wall and week data future sources read, so editing either re-plans.
+  const { loading, storageError, settings, reflections, questions, reminderWall, weeks } = store;
   useEffect(() => {
     // Nothing is derived from a store we could not read — not even a notification.
     if (loading || storageError) return;
-    const sync = () => syncReminders(plannedReminders(REMINDER_SOURCES, settings, new Date(), HORIZON, { reflections, questions }));
+    const sync = () => {
+      const plan = filterQuietOccurrences(plannedReminders(REMINDER_SOURCES, settings, new Date(), HORIZON, { reflections, questions }), settings.quietHours);
+      syncReminders(plan);
+    };
     sync();
     const onVis = () => { if (document.visibilityState === "visible") sync(); };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
-  }, [loading, storageError, settings, reflections, questions]);
+  }, [loading, storageError, settings, reflections, questions, reminderWall, weeks]);
 
   if (store.loading) return <div className="min-h-screen bg-black flex items-center justify-center text-zinc-500">loading…</div>;
 
