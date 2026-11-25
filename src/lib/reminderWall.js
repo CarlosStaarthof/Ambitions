@@ -247,6 +247,42 @@ export function markDone(wall, id, at) {
   return { wall: { categories: w.categories, items: w.items }, error: undefined };
 }
 
+export const UNDO_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+// The deadline is derived from `doneAt` rather than stored, so it cannot drift
+// from the timestamp it is based on. A legacy item with no `doneAt` simply cannot
+// be reopened. `now` is passed in so the decision stays pure and testable.
+function timeMs(value) {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "string" && value.trim()) return new Date(value).getTime();
+  return NaN;
+}
+
+export function canUndoReminder(item, now) {
+  if (!isObject(item)) return false;
+  const doneAtMs = timeMs(item.doneAt);
+  const nowMs = timeMs(now);
+  if (isNaN(doneAtMs) || isNaN(nowMs)) return false;
+  return nowMs - doneAtMs < UNDO_WINDOW_MS;
+}
+
+// Reopening restores an item instead of destroying anything, so it is not armed.
+// `doneAt` is removed by destructuring — never set to null — so the next
+// `markDone` stamps a fresh one and the 24-hour period restarts from that instant.
+export function reopenReminder(wall, id, now) {
+  const w = cloneWall(wall);
+  const index = w.items.findIndex((it) => it.id === id);
+  if (index === -1) return { wall: w, error: "reminder-not-found" };
+
+  const item = w.items[index];
+  if (!item.doneAt) return { wall: w, error: "not-archived" };
+  if (!canUndoReminder(item, now)) return { wall: w, error: "undo-expired" };
+
+  const { doneAt, ...rest } = item;
+  w.items[index] = now === undefined ? rest : { ...rest, updatedAt: now };
+  return { wall: { categories: w.categories, items: w.items }, error: undefined };
+}
+
 // Permanent: the reminder is gone, active or archived. Categories are left
 // untouched, including an empty one that losing its last reminder created.
 export function deleteReminder(wall, id) {

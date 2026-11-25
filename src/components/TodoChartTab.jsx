@@ -1,6 +1,6 @@
-import { Check, CheckCircle2, Clock, Inbox } from "lucide-react";
+import { Check, CheckCircle2, Clock, Inbox, Undo2 } from "lucide-react";
 import { card } from "../lib/ui";
-import { UNCATEGORIZED_COLOR, chartGroups, chartSummary, createdDate, markDone } from "../lib/reminderWall";
+import { UNCATEGORIZED_COLOR, canUndoReminder, chartGroups, chartSummary, createdDate, markDone, reopenReminder } from "../lib/reminderWall";
 
 const tint = (color) => (/^#[0-9a-fA-F]{6}$/.test(color) ? color + "22" : "rgba(255,255,255,0.04)");
 const dateLabel = (iso) => {
@@ -16,13 +16,19 @@ const addedLabel = (iso) => {
   return `Added ${new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`;
 };
 
-export default function TodoChartTab({ reminderWall, setReminderWallP, view = "open" }) {
+export default function TodoChartTab({ reminderWall, setReminderWallP, view = "open", now }) {
+  const nowDate = now instanceof Date ? now : new Date();
   const { open, done, donePercent } = chartSummary(reminderWall);
   const groups = chartGroups(reminderWall);
   const categoryOf = (id) => reminderWall.categories.find((c) => c.id === id) || { name: "Uncategorized", color: UNCATEGORIZED_COLOR };
 
   function tick(id) {
     const r = markDone(reminderWall, id, new Date().toISOString());
+    if (!r.error) setReminderWallP(r.wall);
+  }
+
+  function undo(id) {
+    const r = reopenReminder(reminderWall, id, new Date().toISOString());
     if (!r.error) setReminderWallP(r.wall);
   }
 
@@ -54,6 +60,18 @@ export default function TodoChartTab({ reminderWall, setReminderWallP, view = "o
                     </span>
                     <span className="text-zinc-500">{addedLabel(it.createdAt)}</span>
                     <span className="text-zinc-500">Done {dateLabel(it.doneAt) || "date unknown"}</span>
+                    {canUndoReminder(it, nowDate) ? (
+                      <button
+                        onClick={() => undo(it.id)}
+                        aria-label="Undo done"
+                        className="inline-flex min-h-[28px] shrink-0 items-center gap-1 rounded-lg bg-zinc-800 px-2 text-[11px] font-medium text-zinc-200 hover:bg-zinc-700 active:scale-95"
+                        title="Undo done"
+                      >
+                        <Undo2 size={13} /> Undo
+                      </button>
+                    ) : (
+                      <span className="text-zinc-600">Undo closed</span>
+                    )}
                   </div>
                 </div>
               </div>

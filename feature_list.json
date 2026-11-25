@@ -233,7 +233,7 @@
       "id": 15,
       "name": "week-note-longpress",
       "title": "Long-press opens a week note even with a brush selected",
-      "status": "in_progress",
+      "status": "in_review",
       "spec": "specs/features/015-week-note-longpress.md",
       "depends_on": [
         12
@@ -256,13 +256,14 @@
       "id": 16,
       "name": "todo-undo-window",
       "title": "Undo a done to-do within 24 hours",
-      "status": "pending",
+      "status": "done",
       "spec": "specs/features/016-todo-undo-window.md",
       "depends_on": [
         11
       ],
       "why": "Owner request: an item in the Done tab can be returned to Open for 24 hours after it was marked done; after that it is permanent. If it is reopened and marked done again, the 24-hour window restarts from the new done time.",
-      "acceptance": []
+      "acceptance": [],
+      "review": "progress/review_todo-undo-window.md"
     },
     {
       "id": 17,

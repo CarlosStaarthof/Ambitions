@@ -123,7 +123,7 @@ export default function App() {
         {section === "reminders" && (
           <>
             <SubTabs value={reminderSub} onChange={setReminderSub} tabs={[["open", "Open"], ["done", "Done"]]} />
-            <TodoChartTab reminderWall={store.reminderWall} setReminderWallP={store.setReminderWallP} view={reminderSub} />
+            <TodoChartTab reminderWall={store.reminderWall} setReminderWallP={store.setReminderWallP} view={reminderSub} now={now} />
           </>
         )}
 
