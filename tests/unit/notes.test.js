@@ -318,10 +318,16 @@ describe("source guarantees for the week note UI", () => {
     expect(week).toMatch(/removeNote\(weekNotes/);
   });
 
-  it("uses the user's hold time and never starts a note gesture while a brush is active", () => {
+  it("uses the user's hold time and starts the note gesture even with a brush selected", () => {
     expect(week).toMatch(/settings\.longPressMs/);
     expect(week).toMatch(/setTimeout\(/);
-    expect(week).toMatch(/if \(brush != null \|\| noteDlg\) return;/);
+    // Owner ruling 2026-11-25: the gesture belongs to the calendar, so only an open
+    // note dialog blocks it. The old `brush != null` guard is gone (spec 015).
+    expect(week).not.toMatch(/if \(brush != null \|\| noteDlg\) return;/);
+    const down = week.slice(week.indexOf("function handleCellPointerDown"));
+    const handler = down.slice(0, down.indexOf("function handleCellPointerMove"));
+    expect(handler).toMatch(/if \(noteDlg\) return;/);
+    expect(handler).not.toMatch(/brush\s*!=\s*null/);
   });
 
   // Owner ruling 2026-11-24: the grid scrolls normally. Only a recognised hold

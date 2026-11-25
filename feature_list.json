@@ -220,12 +220,72 @@
       "id": 14,
       "name": "records-todo-chart",
       "title": "Records and To-Do's Chart split",
-      "status": "in_progress",
+      "status": "done",
       "spec": "specs/features/014-records-todo-chart.md",
       "depends_on": [
         11
       ],
       "why": "The 'Reminders' menu mixes a glanceable board with backend editing. Rename it To-Do's Chart and make it a visual, mark-done-only board that stamps each item with the day it was created; rename 'Task & Questions' to Records and let it own every reminder/category control alongside Tasks and Questions. No new store key, no shape change.",
+      "acceptance": [],
+      "review": "progress/review_mww2v497.md"
+    },
+    {
+      "id": 15,
+      "name": "week-note-longpress",
+      "title": "Long-press opens a week note even with a brush selected",
+      "status": "in_progress",
+      "spec": "specs/features/015-week-note-longpress.md",
+      "depends_on": [
+        12
+      ],
+      "why": "Owner bug: after selecting a task (or switching categories, which keeps the brush armed) the week grid stops opening notes on long-press, because feature 12 gated the gesture on `brush == null`. The owner restated the rule: pressing the calendar for the hold time always opens the Note section. The release tap that ends a hold must not also paint.",
+      "acceptance": [
+        "AC-1: `handleCellPointerDown` has no `brush != null` guard; its only early return is the open note dialog, and it still starts the hold with `setTimeout(..., holdMs)`.",
+        "AC-2: Firing the hold timer sets the suppression flag before `openNoteAt` runs.",
+        "AC-3: The click that paints consumes the suppression flag and paints nothing for the tap that ended a hold; the next tap paints normally.",
+        "AC-4: A short tap with a brush still paints one cell and a short tap with the eraser still clears it.",
+        "AC-5: Touch and pen never paint through the mouse-compatibility `onMouseDown` path, so a hold cannot change a cell before the note opens.",
+        "AC-6: The hold time still comes from `clampLongPressMs(settings.longPressMs)` (default 500 ms, 500-3000 ms in 500 ms steps).",
+        "AC-7: Scrolling is unchanged: moving more than `HOLD_CANCEL_PX` cancels the hold, `touch-action` is `pan-y` except during a recognised hold, and the lock is released on lift or cancel.",
+        "AC-8: The Settings help text says a long-press opens the note even with a brush selected and a short tap still paints; it no longer says the gesture needs no brush.",
+        "AC-9: No stored shape, localForage key, export envelope or setting changes.",
+        "AC-10: Device: with a task selected, long-pressing a filled block opens its note and leaves the block unchanged; the next short tap paints that task."
+      ]
+    },
+    {
+      "id": 16,
+      "name": "todo-undo-window",
+      "title": "Undo a done to-do within 24 hours",
+      "status": "pending",
+      "spec": "specs/features/016-todo-undo-window.md",
+      "depends_on": [
+        11
+      ],
+      "why": "Owner request: an item in the Done tab can be returned to Open for 24 hours after it was marked done; after that it is permanent. If it is reopened and marked done again, the 24-hour window restarts from the new done time.",
+      "acceptance": []
+    },
+    {
+      "id": 17,
+      "name": "app-language",
+      "title": "App language and AI answer languages",
+      "status": "pending",
+      "spec": "specs/features/017-app-language.md",
+      "depends_on": [
+        12
+      ],
+      "why": "Owner request: a Settings language choice translates the app, and one or more selected languages tell the AI which languages to understand and answer in. Needs an owner-approved list of supported languages and a decision on the structured answer template before implementation.",
+      "acceptance": []
+    },
+    {
+      "id": 18,
+      "name": "menu-order",
+      "title": "Main menu order: Plan & Balance, To-Do's Chart, Vision Board, Records, Settings",
+      "status": "pending",
+      "spec": "specs/features/018-menu-order.md",
+      "depends_on": [
+        14
+      ],
+      "why": "Owner request: the drawer currently reads Plan & Balance, Records, To-Do's Chart, Vision Board, Settings. It must read Plan & Balance, To-Do's Chart, Vision Board, Records, Settings. Labels and section ids stay as they are; only the order changes.",
       "acceptance": []
     }
   ]

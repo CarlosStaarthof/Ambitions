@@ -255,13 +255,13 @@ install that lacks it. `SettingsTab` changes it by ±500 ms. No new localForage 
 - **Success:** a saved note shows a small marker at the start of its range. Long-pressing any
   cell in the range opens the viewer, which shows the text. It has no audio or play control
   because no audio exists.
-- **Gesture vs brush:** with a paint brush or eraser selected, touch paints at touch-down as
-  today and the note gesture does not fire; with no brush selected, holding a filled cell for
-  `settings.longPressMs` (default 500 ms) selects its whole same-category run for that day
-  and opens the editor. There is no drag extension. The grid allows vertical panning
-  (`touch-action: pan-y`); a finger that moves before the hold completes cancels the gesture
-  and scrolls normally, and scrolling is paused only while a recognised hold is in progress.
-  (Owner ruling, 2026-11-24.)
+- **Gesture vs brush:** holding a filled cell for `settings.longPressMs` (default 500 ms)
+  selects its whole same-category run for that day and opens the editor, whether or not a
+  paint brush or the eraser is selected; the tap that ends the hold does not paint, but a
+  short tap with a brush still paints exactly as before. There is no drag extension. The grid
+  allows vertical panning (`touch-action: pan-y`); a finger that moves before the hold
+  completes cancels the gesture and scrolls normally, and scrolling is paused only while a
+  recognised hold is in progress. (Owner rulings, 2026-11-24 and 2026-11-25 — see below.)
 - **Dictation:** the microphone fills the text field with the cleaned transcript; the user
   edits it and saves. No audio is kept.
 - **AI polish:** the polish control appears only when AI is on and a user key is stored; the
@@ -312,14 +312,15 @@ install that lacks it. `SettingsTab` changes it by ±500 ms. No new localForage 
    has no note; the run stops at empty cells, other categories and the day's edge, so Monday
    23:30 and Tuesday 00:00 are separate runs; `settings.longPressMs` defaults to 500 and
    changes in 500 ms steps; no drag extends the selection. (Device.)
-9. AC-9: The note gesture is available only when no paint brush or eraser is selected: with a
-   brush selected touch paints at touch-down exactly as today and no note gesture fires; a
-   short tap with a brush selected paints exactly as before; no note gesture ever changes a
-   cell. The week grid scrolls vertically normally and never sets `touch-action: none`
-   unconditionally. Scrolling is paused only while a recognised long-press hold is in
-   progress, and the lock is released when the finger lifts or the hold is cancelled; a
-   finger that moves before the hold time cancels the gesture and scrolls the grid.
-   (Device for the feel; source for the scroll-lock state.)
+9. AC-9: The note gesture is always available, with or without a paint brush or eraser
+   selected: holding a filled cell for the hold time opens its note, and only an already
+   open note dialog suppresses the gesture. The click that ends a recognised hold does not
+   paint, while a short tap with a brush selected paints exactly as before. The week grid
+   scrolls vertically normally and never sets `touch-action: none` unconditionally. Scrolling
+   is paused only while a recognised long-press hold is in progress, and the lock is released
+   when the finger lifts or the hold is cancelled; a finger that moves before the hold time
+   cancels the gesture and scrolls the grid. (Device for the feel; source for the scroll-lock
+   state. Superseded by the owner ruling of 2026-11-25 below.)
 10. AC-10: Long-pressing any cell in a range that already has a note opens the viewer, not a
     second editor. The viewer shows the text, has no audio or play control, and shows a
     marker at the range start even when those cells are empty. (Device.)
@@ -401,10 +402,9 @@ component or instrumentation tests; saying otherwise would be a false coverage c
    gone?
 2. **`clear this week` keeps notes (chosen).** Should the armed action clear notes too, with
    copy saying so?
-3. **Long-press notes only when no brush is selected (chosen).** Painting starts at
-   touch-down when a brush is active, so one touch cannot both paint and start a note.
-   Should note gestures require the brush to be deselected, or should painting instead wait
-   for release?
+3. ~~**Long-press notes only when no brush is selected (chosen).**~~ Superseded by the owner
+   ruling of 2026-11-25: the note gesture always fires on a long hold, and painting waits for
+   release on touch. The brush never has to be deselected.
 4. **The hold-time range is not guessed (needs an answer).** `settings.longPressMs` defaults
    to 500 ms and moves in 500 ms steps. What are its minimum and maximum values?
 5. **Polish is a manual per-note action (chosen).** Should optional AI polish ever run
@@ -442,3 +442,17 @@ when the finger lifts or the hold is cancelled. The grid must not disable touch 
 with an unconditional `touch-action: none`. This supersedes the earlier touch-action wording
 in *UI states — Gesture vs brush* and AC-9; the implementation applies the lock only while a
 recognised hold is active and cancels the gesture when the finger moves first.
+
+## Owner ruling, 2026-11-25 — the note gesture is independent of the brush
+
+Reported: after selecting a task to paint, long-press on the calendar stopped opening a
+note; switching to Balance and back restored it (the component remounted and lost the
+brush). The owner restated the rule: *pressing the calendar for the hold time opens the
+Note section*, with no brush condition.
+
+So the note gesture always starts on a long hold, even with a paint brush or the eraser
+selected; only an already open note dialog suppresses it. On touch, painting is committed
+on release, and the release that ends a recognised hold is swallowed so it does not paint.
+A short tap still paints or erases as before. This supersedes the `brush != null` guard,
+the earlier AC-9 and Open question 3. Implemented and pinned by feature 015
+(`specs/features/015-week-note-longpress.md`).

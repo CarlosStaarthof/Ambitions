@@ -54,6 +54,12 @@ export default function WeekTab({ tasks, categories, weeks, settings, ai, aiEnab
   const paintingRef = useRef(false);
   const holdRef = useRef(null);
   const holdStart = useRef(null);
+  // A long hold ends with a synthetic click/mousedown. That trailing tap must not
+  // also paint, so the timer sets this flag and the next tap consumes it.
+  const suppressTapRef = useRef(false);
+  // Touch and pen paint on tap (click), never through the mouse-compatibility
+  // path, so the hold gets its full time before anything changes.
+  const pointerIsTouchRef = useRef(false);
   const { arm, isArmed } = useArmed();
   const now = useNow();
   const holdMs = clampLongPressMs(settings && settings.longPressMs);
@@ -69,7 +75,6 @@ export default function WeekTab({ tasks, categories, weeks, settings, ai, aiEnab
     return () => { window.removeEventListener("pointerup", end); window.removeEventListener("pointercancel", end); };
   }, []);
   useEffect(() => () => clearHold(), []);
-  useEffect(() => { if (brush != null) clearHold(); }, [brush]);
 
   const weekKey = isoDate(weekStart);
   const weekCells = useMemo(() => (weeks[weekKey] && weeks[weekKey].cells) || {}, [weeks, weekKey]);
@@ -156,15 +161,21 @@ export default function WeekTab({ tasks, categories, weeks, settings, ai, aiEnab
   }
 
   function handleCellPointerDown(d, s, e) {
-    // A brush or the eraser owns touch-down: painting is unchanged and no note fires.
-    if (brush != null || noteDlg) return;
+    // The note gesture belongs to the calendar, not to the brush: a selected task
+    // or the eraser no longer disables it. Only an open note dialog does. A short
+    // tap still paints below, because the hold is cancelled on lift.
+    if (noteDlg) return;
     clearHold();
+    suppressTapRef.current = false;
+    pointerIsTouchRef.current = e.pointerType === "touch" || e.pointerType === "pen";
     const index = d * SLOTS + s;
     holdStart.current = { x: e.clientX, y: e.clientY };
     holdRef.current = setTimeout(() => {
       holdRef.current = null;
       holdStart.current = null;
-      // The hold is real: pause scrolling until the finger lifts or cancels.
+      // The hold is real: swallow the tap that ends it and pause scrolling until
+      // the finger lifts or cancels.
+      suppressTapRef.current = true;
       setScrollLocked(true);
       openNoteAt(index);
     }, holdMs);
@@ -295,9 +306,9 @@ export default function WeekTab({ tasks, categories, weeks, settings, ai, aiEnab
                   const tint = filledCell ? null : isNowCell ? "rgba(245,158,11,0.30)" : isNowRow ? "rgba(245,158,11,0.12)" : isToday ? "rgba(245,158,11,0.06)" : null;
                   return (
                     <div key={d} title={filledCell ? `${cell.name} · ${slotLabel(s)}` : slotLabel(s)}
-                      onMouseDown={() => { paintingRef.current = true; applyBrush(d, s); }}
-                      onMouseEnter={() => { if (paintingRef.current) applyBrush(d, s); }}
-                      onClick={() => applyBrush(d, s)}
+                      onMouseDown={() => { if (pointerIsTouchRef.current || suppressTapRef.current) return; paintingRef.current = true; applyBrush(d, s); }}
+                      onMouseEnter={() => { if (paintingRef.current && !suppressTapRef.current) applyBrush(d, s); }}
+                      onClick={() => { if (suppressTapRef.current) { suppressTapRef.current = false; return; } applyBrush(d, s); }}
                       onPointerDown={(e) => handleCellPointerDown(d, s, e)}
                       onPointerMove={handleCellPointerMove}
                       onPointerUp={clearHold}

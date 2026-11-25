@@ -8,3 +8,4 @@ reaches `done`.
 | 2026-09-14 | (harness installed) | — | — |
 | 2026-09-16 | 3 reminders-infrastructure | `specs/features/003-reminders-infrastructure.md` | `progress/review_reminders-infrastructure.md` — APPROVED, 20/28 proven by test, 8 device-only |
 | 2026-09-29 | 7 week-integrity-fix | `specs/features/007-week-integrity-fix.md` | `progress/review_week-integrity-fix.md` — APPROVED, 31/45 proven by test, 14 device-only |
+| 2026-11-25 | 14 records-todo-chart | `specs/features/014-records-todo-chart.md` | `progress/review_mww2v497.md` — APPROVED, 12/12 proven by test (AC-8 source-level), device checks pending |

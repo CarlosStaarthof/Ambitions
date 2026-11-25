@@ -29,7 +29,7 @@ function LongPressCard({ store }) {
         </div>
       </div>
       <p className="text-[11px] text-zinc-500 leading-relaxed">
-        How long a finger rests on a filled week block before its note opens. {LONG_PRESS_MIN / 1000}–{LONG_PRESS_MAX / 1000} s in {LONG_PRESS_STEP / 1000} s steps. The note gesture runs only when no brush is selected.
+        How long a finger rests on a week block before its note opens. {LONG_PRESS_MIN / 1000}–{LONG_PRESS_MAX / 1000} s in {LONG_PRESS_STEP / 1000} s steps. A long-press opens the note even with a brush selected; a short tap still paints.
       </p>
     </div>
   );
