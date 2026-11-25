@@ -128,3 +128,24 @@ Settings.
   `bash init.sh` → `[OK]`.
 - Remaining: reviewer approval; then the leader marks feature 18 `done`. Web-only change,
   so no `cap:sync` and no device check beyond opening the drawer.
+
+## New owner goal (2026-11-25) — Records groups tabs by section (feature 23, round 1 of 5)
+
+**Goal:** Records contains information about the other tabs; its sub-tabs are named after
+the section they serve. Tasks and Questions fall under **Plan & Balance**, and the old
+**Reminders** sub-tab becomes **To-Do's**. Vision Board is named as a future example.
+
+- Spec `specs/features/023-records-tabs.md`; report `progress/impl_records-tabs.md`.
+- `src/App.jsx`: Records top-level tabs `Plan & Balance` / `To-Do's`; `Tasks` and
+  `Questions` nested under Plan & Balance; `Manage` / `Archive` nested under To-Do's with
+  `ReminderWallTab` unchanged. `SubTabs` gained an optional `nested` flag (dims/indents
+  the inner bar only). New local state `recordsSub` (default `plan`).
+- `tests/unit/recordsTabs.test.js` (6) asserts the arrays, mounts, unchanged menu/header
+  labels, no storage surface and both nested bars. `tests/unit/todoChart.test.js` updated
+  where it pinned the old flat `Tasks / Questions / Reminders` array; intent unchanged.
+- Status `pending` → `in_review`. Gate: `npm test --silent` → 18 files, 362 tests;
+  `bash init.sh` → `[OK]`.
+- Remaining: reviewer approval; then the leader marks feature 23 `done`. Web-only change,
+  so no `cap:sync`; device check is only reading the two tab levels at 390 px.
+- Deferred: a Vision Board sub-tab inside Records, until it has a management surface.
+

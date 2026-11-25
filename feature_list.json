@@ -347,6 +347,26 @@
       ],
       "why": "Owner request: an editable morning digest (default 08:00, toggle) lists the open to-dos that have no start time.",
       "acceptance": []
+    },
+    {
+      "id": 23,
+      "name": "records-tabs",
+      "title": "Records sub-tabs named after the main sections",
+      "status": "in_review",
+      "spec": "specs/features/023-records-tabs.md",
+      "depends_on": [
+        14,
+        18
+      ],
+      "why": "Owner request: Records should group its editing tabs under the names of the main sections they serve — Tasks and Questions under Plan & Balance, reminder management renamed To-Do's — so Records reads as the management face of those sections. Vision Board is a future example and is not added yet.",
+      "acceptance": [
+        "AC-1: `App.jsx` renders the Records top-level tabs in exactly the order `[[\"plan\", \"Plan & Balance\"], [\"todos\", \"To-Do's\"]]`, and no Records top-level tab is labelled `Reminders`, `Tasks` or `Questions`.",
+        "AC-2: Under the `plan` tab, `Tasks` and `Questions` render in exactly that order from `[[\"tasks\", \"Tasks\"], [\"guiding\", \"Questions\"]]`, and they still mount `TasksTab` and `GuidingTab` with the same props as before.",
+        "AC-3: Under the `todos` tab, `Manage` and `Archive` still mount `ReminderWallTab` with the same props, so category create/rename/delete, reminder create/edit and permanent delete (open and archived) remain reachable.",
+        "AC-4: `AppMenu.jsx` and the `App.jsx` `SECTION_LABEL` map are unchanged: `tasks` still reads `Records` and `reminders` still reads `To-Do's Chart` in the main menu.",
+        "AC-5: No stored shape, localForage key, settings default or export version changes; the only files touched are `src/App.jsx`, the test files and docs.",
+        "AC-6: `npm test --silent` passes, including a source-read test asserting the tab arrays and mounts above."
+      ]
     }
   ]
 }

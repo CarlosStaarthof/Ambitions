@@ -21,11 +21,11 @@ import SettingsTab from "./components/SettingsTab";
 
 const SECTION_LABEL = { plan: "Plan & Balance", tasks: "Records", reminders: "To-Do's Chart", vision: "Vision Board", settings: "Settings" };
 
-function SubTabs({ value, onChange, tabs }) {
+function SubTabs({ value, onChange, tabs, nested = false }) {
   return (
-    <div className="flex gap-1 mb-3 border-b border-zinc-800">
+    <div className={"flex gap-1 mb-3 border-b " + (nested ? "border-zinc-900 pl-2" : "border-zinc-800")}>
       {tabs.map(([id, label]) => (
-        <button key={id} onClick={() => onChange(id)} className={"px-3 py-2 text-sm -mb-px border-b-2 " + (value === id ? "text-amber-400 border-amber-400 font-medium" : "text-zinc-400 border-transparent hover:text-zinc-200")}>{label}</button>
+        <button key={id} onClick={() => onChange(id)} className={"px-3 py-2 -mb-px border-b-2 " + (nested ? "text-xs " : "text-sm ") + (value === id ? "text-amber-400 border-amber-400 font-medium" : "text-zinc-400 border-transparent hover:text-zinc-200")}>{label}</button>
       ))}
     </div>
   );
@@ -36,6 +36,7 @@ export default function App() {
   const [section, setSection] = useState("plan");
   const [menuOpen, setMenuOpen] = useState(false);
   const [planSub, setPlanSub] = useState("week");
+  const [recordsSub, setRecordsSub] = useState("plan");
   const [taskSub, setTaskSub] = useState("tasks");
   const [recordsReminderSub, setRecordsReminderSub] = useState("wall");
   const [reminderSub, setReminderSub] = useState("open");
@@ -136,12 +137,17 @@ export default function App() {
 
         {section === "tasks" && (
           <>
-            <SubTabs value={taskSub} onChange={setTaskSub} tabs={[["tasks", "Tasks"], ["guiding", "Questions"], ["reminders", "Reminders"]]} />
-            {taskSub === "tasks" && <TasksTab tasks={store.tasks} categories={store.categories} setTasksP={store.setTasksP} setCategoriesP={store.setCategoriesP} />}
-            {taskSub === "guiding" && <GuidingTab questions={store.questions} setQuestionsP={store.setQuestionsP} reflections={store.reflections} setReflectionsP={store.setReflectionsP} online={online} aiEnabled={aiEnabled} ai={ai} />}
-            {taskSub === "reminders" && (
+            <SubTabs value={recordsSub} onChange={setRecordsSub} tabs={[["plan", "Plan & Balance"], ["todos", "To-Do's"]]} />
+            {recordsSub === "plan" && (
               <>
-                <SubTabs value={recordsReminderSub} onChange={setRecordsReminderSub} tabs={[["wall", "Manage"], ["archive", "Archive"]]} />
+                <SubTabs value={taskSub} onChange={setTaskSub} tabs={[["tasks", "Tasks"], ["guiding", "Questions"]]} nested />
+                {taskSub === "tasks" && <TasksTab tasks={store.tasks} categories={store.categories} setTasksP={store.setTasksP} setCategoriesP={store.setCategoriesP} />}
+                {taskSub === "guiding" && <GuidingTab questions={store.questions} setQuestionsP={store.setQuestionsP} reflections={store.reflections} setReflectionsP={store.setReflectionsP} online={online} aiEnabled={aiEnabled} ai={ai} />}
+              </>
+            )}
+            {recordsSub === "todos" && (
+              <>
+                <SubTabs value={recordsReminderSub} onChange={setRecordsReminderSub} tabs={[["wall", "Manage"], ["archive", "Archive"]]} nested />
                 <ReminderWallTab reminderWall={store.reminderWall} setReminderWallP={store.setReminderWallP} view={recordsReminderSub} />
               </>
             )}

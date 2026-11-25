@@ -130,11 +130,12 @@ describe("Records and To-Do's Chart (source-read)", () => {
     expect(app).toMatch(/reminders: "To-Do's Chart"/);
   });
 
-  // AC-3 / AC-4
+  // AC-3 / AC-4 — regrouping under section-named tabs is feature 23, which still keeps
+  // every one of these destinations reachable from Records.
   it("routes Records to tasks, questions and reminder management", () => {
     const app = read("../../src/App.jsx");
-    expect(app).toContain('[["tasks", "Tasks"], ["guiding", "Questions"], ["reminders", "Reminders"]]');
-    expect(app).toMatch(/taskSub === "reminders" &&/);
+    expect(app).toContain('[["tasks", "Tasks"], ["guiding", "Questions"]]');
+    expect(app).toMatch(/recordsSub === "todos" &&/);
     expect(app).toMatch(/<ReminderWallTab /);
   });
 
