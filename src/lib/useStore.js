@@ -3,6 +3,7 @@ import { loadKey, saveKey } from "./storage";
 import { SEED_TASKS, SEED_CATEGORIES, SEED_QUESTIONS, normalizeModel, backfillOpenWeeks, mergeSettings, loadDecision } from "./seed";
 import { mondayOf, isoDate, normalizeQuietHours } from "./time";
 import { normalizeUnrecorded } from "./nudge";
+import { normalizeDigest } from "./morningDigest";
 import { NONE, PROVIDERS } from "./providers";
 import { secureGet, secureSet, secureRemove, aiKeyName } from "./secureStore";
 import { emptyReminderWall, normalizeReminderWall } from "./reminderWall";
@@ -28,6 +29,9 @@ export const DEFAULT_SETTINGS = {
   // `lastNudged*` is state, not a preference, but it lives here because settings is
   // one key and never part of the export.
   unrecorded: { enabled: false, gapMinutes: 60, lastNudgedGapStart: null, lastNudgedAt: null },
+  // One optional morning list of open wall to-dos that have no start time. Off by
+  // default like every notification source; the time is an editable local clock.
+  digest: { enabled: false, time: "08:00" },
   // How long a finger must rest on a filled week cell before the note gesture
   // starts, in milliseconds. A user setting, never week data. Absent on older
   // installs, so mergeSettings fills it on load.
@@ -116,7 +120,8 @@ export function useStore() {
       const next = {
         ...merged,
         quietHours: normalizeQuietHours(merged.quietHours),
-        unrecorded: normalizeUnrecorded(merged.unrecorded)
+        unrecorded: normalizeUnrecorded(merged.unrecorded),
+        digest: normalizeDigest(merged.digest)
       };
       setSettings(next);
       if (legacy && Object.keys(legacy).length) saveKey("settings", next);
@@ -138,7 +143,8 @@ export function useStore() {
     const next = {
       ...n,
       quietHours: normalizeQuietHours(n.quietHours),
-      unrecorded: normalizeUnrecorded(n.unrecorded)
+      unrecorded: normalizeUnrecorded(n.unrecorded),
+      digest: normalizeDigest(n.digest)
     };
     if (next.ai && "keys" in next.ai) delete next.ai.keys;   // never let a key reach localForage
     saveKey("settings", next);

@@ -332,7 +332,7 @@
       "id": 22,
       "name": "morning-digest",
       "title": "Morning digest of open to-dos with no time",
-      "status": "pending",
+      "status": "in_review",
       "spec": "specs/features/022-morning-digest.md",
       "depends_on": [
         19,

@@ -18,7 +18,9 @@ to-do schema changes.
 - 21 `todo-times` — **in_review** (round 3, reviewer APPROVED, device checks pending).
   Start/end on wall items, start alert, export v7. Review:
   `progress/review_todo-times.md`.
-- 22 `morning-digest` — next (round 4). Open to-dos with no time, 08:00 editable + toggle.
+- 22 `morning-digest` — **in_review** (round 4). Open to-dos with no start time, 08:00
+  editable + toggle, quiet-filtered. Spec `specs/features/022-morning-digest.md`; report
+  `progress/impl_morning-digest.md`.
 
 Features 11, 12, 13 and 15 remain `in_review` (device checks pending). 14, 16 and 19
 are `done`.
@@ -83,13 +85,28 @@ are `done`.
   occurrence and `updatedAt`, so a same-day start-time or text edit re-schedules instead
   of leaving the old alarm pending; spec AC-8 amended, re-review APPROVED.
 
+## Round 4 — morning digest (feature 22, in_review)
+
+- Spec `specs/features/022-morning-digest.md`; report
+  `progress/impl_morning-digest.md`.
+- `src/lib/morningDigest.js` (new, pure): `normalizeDigest`, `digestItems`,
+  `plannedMorningDigest`. One entry at the next local occurrence of the configured time;
+  body lists each open untimed to-do; id encodes the occurrence and listed content so an
+  edited list replaces the pending alarm instead of leaving a stale body.
+- `DEFAULT_SETTINGS.digest = { enabled: false, time: "08:00" }`; normalised on load and
+  on every settings write. Still eight localForage keys.
+- Settings → Notifications: Morning digest toggle (permission at intent), editable time,
+  copy. `App` merges the digest into the plan before quiet hours.
+- Tests: `tests/unit/morningDigest.test.js` (15). Gate: 16 files, 352 tests;
+  `bash init.sh` → `[OK]`.
+- No export bump: only `settings` changed and it is never exported.
+
 ## Next round (planned)
 
-- 22 `morning-digest`: write `specs/features/022-morning-digest.md`, then implement the
-  08:00 editable/toggle digest of open wall items with no time. It is the last
-  Notifications v2 source.
+- Review feature 22 and the accumulated device checks for 20, 21 and 22. No new
+  Notifications v2 source remains.
 - Device checks accumulate for the end of the goal (delivery with app backgrounded,
-  permission prompt when a start time is first set).
+  permission prompt when a start time is first set or the digest/nudge is enabled).
 
 ## Still open from the earlier goal
 

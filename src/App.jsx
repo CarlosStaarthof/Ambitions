@@ -7,6 +7,7 @@ import { card } from "./lib/ui";
 import { REMINDER_SOURCES, HORIZON, plannedReminders, filterQuietOccurrences } from "./lib/reminders";
 import { unrecordedNudge, normalizeUnrecorded } from "./lib/nudge";
 import { plannedTodoAlerts } from "./lib/todoTimes";
+import { plannedMorningDigest } from "./lib/morningDigest";
 import { syncReminders } from "./lib/notify";
 import AppMenu from "./components/AppMenu";
 import WeekTab from "./components/WeekTab";
@@ -63,7 +64,8 @@ export default function App() {
       const nudge = unrecordedNudge(now, weeks, settings.unrecorded);
       const planned = [
         ...plannedReminders(REMINDER_SOURCES, settings, now, HORIZON, { reflections, questions }),
-        ...plannedTodoAlerts(reminderWall && reminderWall.items, now)
+        ...plannedTodoAlerts(reminderWall && reminderWall.items, now),
+        ...plannedMorningDigest(reminderWall && reminderWall.items, settings.digest, now)
       ];
       const plan = filterQuietOccurrences(nudge ? [...planned, nudge.entry] : planned, settings.quietHours);
       syncReminders(plan);

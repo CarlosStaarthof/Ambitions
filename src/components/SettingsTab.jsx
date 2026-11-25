@@ -5,6 +5,7 @@ import { PROVIDERS, NONE, providerById } from "../lib/providers";
 import { fetchModels, aiErrorText } from "../lib/ai";
 import { REMINDER_SOURCES } from "../lib/reminders";
 import { NUDGE_GAP_OPTIONS, normalizeUnrecorded } from "../lib/nudge";
+import { normalizeDigest } from "../lib/morningDigest";
 import { normalizeQuietHours } from "../lib/time";
 import { clampLongPressMs, LONG_PRESS_MIN, LONG_PRESS_MAX, LONG_PRESS_STEP } from "../lib/seed";
 import { notifySupported, notifyPermission, requestNotifyPermission } from "../lib/notify";
@@ -47,6 +48,7 @@ function RemindersCard({ store }) {
   const reminders = (store.settings && store.settings.reminders) || {};
   const quietHours = normalizeQuietHours(store.settings && store.settings.quietHours);
   const unrecorded = normalizeUnrecorded(store.settings && store.settings.unrecorded);
+  const digest = normalizeDigest(store.settings && store.settings.digest);
   const setQuietHours = (patch) => store.setSettingsP((prev) => ({
     ...prev,
     quietHours: normalizeQuietHours({ ...(prev.quietHours || {}), ...patch })
@@ -54,6 +56,10 @@ function RemindersCard({ store }) {
   const setUnrecorded = (patch) => store.setSettingsP((prev) => ({
     ...prev,
     unrecorded: normalizeUnrecorded({ ...normalizeUnrecorded(prev.unrecorded), ...patch })
+  }));
+  const setDigest = (patch) => store.setSettingsP((prev) => ({
+    ...prev,
+    digest: normalizeDigest({ ...normalizeDigest(prev.digest), ...patch })
   }));
 
   // Reading the permission is instant on device and a no-op on web, so the toggles
@@ -83,6 +89,15 @@ function RemindersCard({ store }) {
     if (p !== "granted") { setBlocked(true); return; }
     setBlocked(false);
     setUnrecorded({ enabled: true });
+  }
+
+  async function toggleDigest(on) {
+    if (!on) { setBlocked(false); setDigest({ enabled: false }); return; }
+    let p = perm;
+    if (p !== "granted") { p = await requestNotifyPermission(); setPerm(p); }
+    if (p !== "granted") { setBlocked(true); return; }
+    setBlocked(false);
+    setDigest({ enabled: true });
   }
 
   return (
@@ -131,6 +146,32 @@ function RemindersCard({ store }) {
         </div>
         <p className="text-[11px] text-zinc-500 leading-relaxed">
           Nudges once when the chosen stretch has no recorded block, then stays quiet until you record one. Silence still applies during quiet hours.
+        </p>
+      </div>
+
+      <div className="space-y-2 pt-3 border-t border-zinc-800">
+        <label className={"flex items-center justify-between gap-3 text-sm text-zinc-300 " + (supported ? "cursor-pointer" : "opacity-50")}>
+          <span className="min-w-0">Morning digest</span>
+          <input
+            type="checkbox"
+            disabled={!supported}
+            checked={digest.enabled}
+            onChange={(e) => toggleDigest(e.target.checked)}
+            className="h-4 w-4 accent-amber-500 shrink-0 disabled:opacity-50"
+          />
+        </label>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-zinc-300">Send at</span>
+          <input
+            type="time"
+            value={digest.time}
+            disabled={!digest.enabled}
+            onChange={(e) => setDigest({ time: e.target.value })}
+            className={inputCls + " disabled:opacity-50"}
+          />
+        </div>
+        <p className="text-[11px] text-zinc-500 leading-relaxed">
+          One list each morning of the open to-dos that have no start time. Skipped on days when there are none.
         </p>
       </div>
 
