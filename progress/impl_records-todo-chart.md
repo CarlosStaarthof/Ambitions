@@ -75,3 +75,23 @@ digest, keep the 390 px layout clean, and never lose an item.
 
 Gate: `npm test --silent` → 10 files, 250 tests passed; `bash init.sh` →
 `[OK] build green, tests green, scope clean`.
+
+## Round 3 — creation-date wiring and Done-transition proof
+
+- `src/components/TodoChartTab.jsx` — `addedLabel` now calls the pure `createdDate(iso)`
+  helper instead of re-parsing the timestamp, so the spec's helper is used in production
+  and there is one definition of "original creation day". Display is unchanged
+  (`Added 18 Nov 2026`; `Added date unknown` for legacy items).
+- `src/components/ReminderWallTab.jsx` — the open-reminder cards in Records now carry the
+  same `Clock` + `Added <date>` stamp, so the management view and the To-Do's Chart agree
+  on when each item was captured. Buttons wrap with the stamp on narrow screens; no data
+  or behaviour changed, and archive/deletion stay as they were.
+- `tests/unit/todoChart.test.js` — 3 new tests (20 total):
+  - AC-8: `markDone` moves exactly the ticked item from the open board to the done set,
+    updates `chartSummary` to `{ open: 1, done: 1, total: 2, donePercent: 50 }`, leaves the
+    sibling untouched and does not mutate the input wall.
+  - AC-8: a missing id returns `reminder-not-found` and changes nothing.
+  - AC-7/AC-10: both `TodoChartTab` and `ReminderWallTab` derive their stamp through
+    `createdDate`, so the helper is not dead code.
+
+**Gate:** `npm test --silent` → 10 files, 253 tests passed. `bash init.sh` → `[OK]`.

@@ -1,8 +1,27 @@
 # Current session
 
 **Date:** 2026-11-25
-**In flight:** feature 14 `records-todo-chart` — round 2 (chart polish + pure shaping,
-gate green). Feature 11 and 13 remain `in_review`; 14 holds the single `in_progress` slot.
+**In flight:** feature 14 `records-todo-chart` — round 3 (creation-date wiring + Done
+transition test, gate green). Feature 11 and 13 remain `in_review`; 14 holds the single
+`in_progress` slot.
+
+## Round 3 — creation-date consistency
+
+- `src/components/TodoChartTab.jsx` — the `Added <date>` stamp now comes from the pure
+  `createdDate` helper, so the chart no longer keeps a second inline date parser and the
+  helper the spec names is actually used in production. Legacy items still read
+  `Added date unknown`.
+- `src/components/ReminderWallTab.jsx` — each open reminder in Records now shows the same
+  `Added <date>` stamp (`Clock` icon, 10 px) beside its edit/done/delete controls, so the
+  management view and the board agree on the record. No stored field is added or changed.
+- `tests/unit/todoChart.test.js` — 3 new tests (20 total): ticking an item moves exactly
+  that item to the archive, updates the summary to 50%, leaves the other item untouched
+  and does not mutate the input; a missing id is a no-op with `reminder-not-found`; both
+  views derive their stamp through `createdDate`.
+- Gate: `npm test --silent` → 10 files, 253 tests passed.
+
+**Remaining:** device-only visual check at 390 px and the Done transition. No other known
+source work for feature 14.
 
 ## Round 2 — To-Do's Chart visual polish
 

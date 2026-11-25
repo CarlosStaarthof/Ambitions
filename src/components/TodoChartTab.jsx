@@ -1,6 +1,6 @@
 import { Check, CheckCircle2, Clock, Inbox } from "lucide-react";
 import { card } from "../lib/ui";
-import { UNCATEGORIZED_COLOR, chartGroups, chartSummary, markDone } from "../lib/reminderWall";
+import { UNCATEGORIZED_COLOR, chartGroups, chartSummary, createdDate, markDone } from "../lib/reminderWall";
 
 const tint = (color) => (/^#[0-9a-fA-F]{6}$/.test(color) ? color + "22" : "rgba(255,255,255,0.04)");
 const dateLabel = (iso) => {
@@ -10,8 +10,10 @@ const dateLabel = (iso) => {
 // The board's whole point is that each item is a dated commitment. A legacy item
 // without a timestamp says so rather than pretending it appeared today.
 const addedLabel = (iso) => {
-  const d = dateLabel(iso);
-  return d ? `Added ${d}` : "Added date unknown";
+  const day = createdDate(iso);
+  if (!day) return "Added date unknown";
+  const [y, m, d] = day.split("-").map(Number);
+  return `Added ${new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`;
 };
 
 export default function TodoChartTab({ reminderWall, setReminderWallP, view = "open" }) {

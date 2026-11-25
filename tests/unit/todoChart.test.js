@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { createdDate, chartGroups, chartSummary } from "../../src/lib/reminderWall.js";
+import { createdDate, chartGroups, chartSummary, markDone } from "../../src/lib/reminderWall.js";
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 const wall = (categories, items) => ({ categories, items });
@@ -85,6 +85,34 @@ describe("chartSummary", () => {
   });
 });
 
+describe("ticking an item done moves it to the archive (AC-8)", () => {
+  const categories = [
+    { id: "home", name: "Home", color: "#111111" },
+    { id: "work", name: "Work", color: "#222222" }
+  ];
+
+  it("moves exactly the ticked item from open to done and leaves the rest alone", () => {
+    const before = wall(categories, [
+      { id: "a", categoryId: "home", text: "buy milk", createdAt: "2026-11-02T10:00:00.000Z" },
+      { id: "b", categoryId: "work", text: "send report", createdAt: "2026-11-01T10:00:00.000Z" }
+    ]);
+    const r = markDone(before, "a", "2026-11-20T09:00:00.000Z");
+    expect(r.error).toBeUndefined();
+    expect(chartGroups(r.wall).flatMap((g) => g.items.map((it) => it.id))).toEqual(["b"]);
+    expect(chartSummary(r.wall)).toEqual({ open: 1, done: 1, total: 2, donePercent: 50 });
+    expect(r.wall.items.find((it) => it.id === "b")).toEqual(before.items[1]);
+    expect(r.wall.items.find((it) => it.id === "a").doneAt).toBe("2026-11-20T09:00:00.000Z");
+    expect(before.items.find((it) => it.id === "a").doneAt).toBeUndefined();
+  });
+
+  it("changes nothing when the id is not on the wall", () => {
+    const before = wall(categories, [{ id: "a", categoryId: "home", text: "x", createdAt: "2026-11-02T10:00:00.000Z" }]);
+    const r = markDone(before, "missing", "2026-11-20T09:00:00.000Z");
+    expect(r.error).toBe("reminder-not-found");
+    expect(r.wall).toEqual(before);
+  });
+});
+
 describe("Records and To-Do's Chart (source-read)", () => {
   // AC-1
   it("renames the two menu entries", () => {
@@ -126,11 +154,22 @@ describe("Records and To-Do's Chart (source-read)", () => {
     expect(chart).not.toMatch(/setTasksP|setWeeksP|setCategoriesP|setSettingsP/);
   });
 
-  // AC-7
+  // AC-7 / AC-10
   it("stamps each item with its original creation date and never invents one", () => {
     const chart = read("../../src/components/TodoChartTab.jsx");
     expect(chart).toMatch(/it\.createdAt/);
     expect(chart).toContain("Added date unknown");
+  });
+
+  // AC-7 / AC-10 — the pure helper is the one source of the stamp, in both views.
+  it("derives creation stamps through createdDate instead of parsing inline", () => {
+    const chart = read("../../src/components/TodoChartTab.jsx");
+    expect(chart).toMatch(/import\s*\{[^}]*createdDate[^}]*\}\s*from\s*"\.\.\/lib\/reminderWall"/s);
+    expect(chart).toMatch(/createdDate\(iso\)/);
+    const records = read("../../src/components/ReminderWallTab.jsx");
+    expect(records).toMatch(/import\s*\{[^}]*createdDate[^}]*\}\s*from\s*"\.\.\/lib\/reminderWall"/s);
+    expect(records).toMatch(/createdDate\(iso\)/);
+    expect(records).toMatch(/addedLabel\(it\.createdAt\)/);
   });
 
   // AC-9

@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, Clock, Pencil, Plus, Trash2, X } from "lucide-react";
 import { uid } from "../lib/time";
 import { card, inputCls, selectCls, btnPrimary, btnGhost } from "../lib/ui";
 import { useArmed } from "../lib/useArmed";
 import {
   UNCATEGORIZED_ID, UNCATEGORIZED_COLOR,
-  activeReminders, archivedReminders, categoryUsage,
+  activeReminders, archivedReminders, categoryUsage, createdDate,
   addCategory, renameCategory, deleteCategory, addReminder, editReminder, markDone,
   deleteReminder
 } from "../lib/reminderWall";
@@ -24,6 +24,12 @@ const tint = (color) => (/^#[0-9a-fA-F]{6}$/.test(color) ? color + "22" : "rgba(
 const doneLabel = (iso) => {
   const d = new Date(iso);
   return isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+};
+const addedLabel = (iso) => {
+  const day = createdDate(iso);
+  if (!day) return "Added date unknown";
+  const [y, m, d] = day.split("-").map(Number);
+  return `Added ${new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`;
 };
 
 export default function ReminderWallTab({ reminderWall, setReminderWallP, view = "wall" }) {
@@ -268,17 +274,23 @@ export default function ReminderWallTab({ reminderWall, setReminderWallP, view =
                     ) : (
                       <>
                         <p className="text-sm text-zinc-100 whitespace-pre-wrap break-words">{it.text}</p>
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => startEdit(it)} aria-label="Edit reminder" title="Edit reminder" className="p-1.5 rounded text-zinc-400 hover:bg-zinc-800"><Pencil size={14} /></button>
-                          <button onClick={() => tickDone(it.id)} aria-label="Mark reminder done" className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 inline-flex items-center gap-1"><Check size={13} /> Done</button>
-                          <button
-                            onClick={() => arm("rmDel" + it.id, () => removeItem(it.id))}
-                            aria-label="Delete reminder"
-                            title="Delete reminder permanently"
-                            className={"inline-flex items-center gap-1 text-xs px-2 py-1 rounded " + (armed ? "bg-red-600 text-white" : "text-red-400 hover:bg-zinc-800")}
-                          >
-                            <Trash2 size={13} /> {armed ? "tap to confirm" : "Delete"}
-                          </button>
+                        <div className="flex flex-wrap items-center justify-between gap-1">
+                          <span className="inline-flex min-w-0 items-center gap-1 text-[10px] text-zinc-500" title={addedLabel(it.createdAt)}>
+                            <Clock size={11} className="shrink-0" />
+                            <span className="truncate">{addedLabel(it.createdAt)}</span>
+                          </span>
+                          <div className="ml-auto flex items-center gap-1">
+                            <button onClick={() => startEdit(it)} aria-label="Edit reminder" title="Edit reminder" className="p-1.5 rounded text-zinc-400 hover:bg-zinc-800"><Pencil size={14} /></button>
+                            <button onClick={() => tickDone(it.id)} aria-label="Mark reminder done" className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 inline-flex items-center gap-1"><Check size={13} /> Done</button>
+                            <button
+                              onClick={() => arm("rmDel" + it.id, () => removeItem(it.id))}
+                              aria-label="Delete reminder"
+                              title="Delete reminder permanently"
+                              className={"inline-flex items-center gap-1 text-xs px-2 py-1 rounded " + (armed ? "bg-red-600 text-white" : "text-red-400 hover:bg-zinc-800")}
+                            >
+                              <Trash2 size={13} /> {armed ? "tap to confirm" : "Delete"}
+                            </button>
+                          </div>
                         </div>
                       </>
                     )}
