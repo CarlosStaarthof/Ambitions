@@ -112,3 +112,19 @@ are `done`.
 
 - Feature 17 `app-language` remains blocked on the owner's language list and AI answer
   template. Do not guess either.
+
+## New owner goal (2026-11-25) — main menu order (feature 18)
+
+**Goal:** drawer order becomes Plan & Balance, To-Do's Chart, Vision Board, Records,
+Settings.
+
+- Spec `specs/features/018-menu-order.md` (was referenced by `feature_list.json` but
+  missing); report `progress/impl_menu-order.md`.
+- `src/components/AppMenu.jsx`: reordered `ITEMS` only. Labels, ids, icons and every
+  other component unchanged. No stored shape, key or export version touched.
+- `tests/unit/menuOrder.test.js` (4) asserts the order, one occurrence per label, the
+  unchanged ids and the unchanged header-label mapping in `App.jsx`.
+- Status `pending` → `in_review`. Gate: `npm test --silent` → 17 files, 356 tests;
+  `bash init.sh` → `[OK]`.
+- Remaining: reviewer approval; then the leader marks feature 18 `done`. Web-only change,
+  so no `cap:sync` and no device check beyond opening the drawer.

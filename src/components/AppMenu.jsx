@@ -4,9 +4,9 @@ import { X, CalendarRange, ListTodo, StickyNote, Images, Settings } from "lucide
 // entry that only says "coming soon" is a dead end. Restore them with the accounts phase.
 const ITEMS = [
   { id: "plan", label: "Plan & Balance", icon: CalendarRange },
-  { id: "tasks", label: "Records", icon: ListTodo },
   { id: "reminders", label: "To-Do's Chart", icon: StickyNote },
   { id: "vision", label: "Vision Board", icon: Images },
+  { id: "tasks", label: "Records", icon: ListTodo },
   { id: "settings", label: "Settings", icon: Settings }
 ];
 

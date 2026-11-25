@@ -281,13 +281,20 @@
       "id": 18,
       "name": "menu-order",
       "title": "Main menu order: Plan & Balance, To-Do's Chart, Vision Board, Records, Settings",
-      "status": "pending",
+      "status": "in_review",
       "spec": "specs/features/018-menu-order.md",
       "depends_on": [
         14
       ],
       "why": "Owner request: the drawer currently reads Plan & Balance, Records, To-Do's Chart, Vision Board, Settings. It must read Plan & Balance, To-Do's Chart, Vision Board, Records, Settings. Labels and section ids stay as they are; only the order changes.",
-      "acceptance": []
+      "acceptance": [
+        "AC-1: `AppMenu.jsx` lists the five sections in exactly the order `plan`, `reminders`, `vision`, `tasks`, `settings`.",
+        "AC-2: The labels in that order are `Plan & Balance`, `To-Do's Chart`, `Vision Board`, `Records`, `Settings`, each appearing exactly once.",
+        "AC-3: Every section id is unchanged from before this feature (`plan`, `tasks`, `reminders`, `vision`, `settings`), so `section === it.id` still marks the active entry and every `onSelect(id)` still routes as before.",
+        "AC-4: `App.jsx` still labels `tasks` as `Records` and `reminders` as `To-Do's Chart`; no section label changes anywhere.",
+        "AC-5: No stored shape, localForage key, settings default or export version changes.",
+        "AC-6: `npm test --silent` passes, including a test asserting the order above."
+      ]
     },
     {
       "id": 19,
