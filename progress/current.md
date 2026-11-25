@@ -1,9 +1,34 @@
 # Current session
 
-**Date:** 2026-11-24
-**In flight:** feature 13 `vision-board-text` — round 1 (implemented, gate green, awaiting
-review). Feature 12 `block-notes` moved to `in_review`; 11 `reminder-wall` is also
-`in_review`. 13 is the single `in_progress` feature the gate allows.
+**Date:** 2026-11-25
+**In flight:** feature 14 `records-todo-chart` — round 1 (menu split implemented, gate
+green). Feature 13 `vision-board-text` was APPROVED by the reviewer
+(`progress/review_mwv9s9xs.md`) and is now `in_review` pending owner sign-off, freeing the
+single `in_progress` slot for feature 14.
+
+## Round 1 — feature 14 Records / To-Do's Chart split
+
+Owner goal, 2026-11-25: rename `Reminders` to **To-Do's Chart** (visualisation + mark done
+only) and `Task & Questions` to **Records** (all reminder/category backend), with every
+to-do stamped with the date it was originally created.
+
+- `src/components/AppMenu.jsx` and `App.jsx` `SECTION_LABEL`: `tasks` → **Records**,
+  `reminders` → **To-Do's Chart**. Section ids unchanged.
+- Records now has `Tasks | Questions | Reminders`; its Reminders sub-tab mounts the
+  unchanged `ReminderWallTab` with a nested `Manage | Archive` switch, so category
+  create/rename/delete, reminder create/edit and permanent delete all stay in Records.
+- New `src/components/TodoChartTab.jsx`: read + tick-done only. Open view groups post-its
+  by category with counts and an `Added <date>` stamp; Done view is read-only with created
+  and done dates. Imports `markDone` only — no add/edit/delete/category or `useArmed`.
+- New pure `createdDate(iso)` in `src/lib/reminderWall.js` returning `YYYY-MM-DD` or null;
+  no stored-shape change, no new key, export stays `version: 6`.
+- New `tests/unit/todoChart.test.js` (10 tests): `createdDate` cases, both menu labels,
+  header labels, Records routing, To-Do's-only-done, the creation stamp, read-only done
+  view, and the no-key/no-export/no-AI guarantees.
+- Gate: `npm test --silent` → 10 files, 243 tests passed; `bash init.sh` → `[OK]`.
+
+**Remaining:** device-only visual check of the chart at 390 px; later rounds can move any
+other per-tab backend settings into Records and refine the chart's group layout.
 
 ## Round 6 — feature 13 vision board text + This year
 

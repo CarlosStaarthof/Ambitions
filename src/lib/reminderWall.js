@@ -98,6 +98,16 @@ export function normalizeReminderWall(value) {
   return { categories, items };
 }
 
+// The local calendar day an item was first captured, as YYYY-MM-DD, or null when
+// the stored value is missing or unparseable. Items written before the wall stored
+// timestamps simply have none — nothing is backfilled on load.
+export function createdDate(iso) {
+  if (typeof iso !== "string" || !iso.trim()) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export function activeReminders(items) {
   return (Array.isArray(items) ? items : [])
     .filter((it) => it && !it.doneAt)

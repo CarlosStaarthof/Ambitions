@@ -210,9 +210,22 @@
       "id": 13,
       "name": "vision-board-text",
       "title": "Vision Board: open text, no task link, This year jump",
-      "status": "in_progress",
+      "status": "in_review",
       "spec": "specs/features/013-vision-board-text.md",
       "why": "The board tied every picture to an Ambition task, which turned a mood board into a second task list. Each card should instead carry up to 280 characters of free text linked to nothing, and the year switcher needs a This year jump like the week grid's Today so browsing to a past year does not strand the user there. The KB readout of images is removed from the header.",
+      "acceptance": [],
+      "review": "progress/review_mwv9s9xs.md"
+    },
+    {
+      "id": 14,
+      "name": "records-todo-chart",
+      "title": "Records and To-Do's Chart split",
+      "status": "in_progress",
+      "spec": "specs/features/014-records-todo-chart.md",
+      "depends_on": [
+        11
+      ],
+      "why": "The 'Reminders' menu mixes a glanceable board with backend editing. Rename it To-Do's Chart and make it a visual, mark-done-only board that stamps each item with the day it was created; rename 'Task & Questions' to Records and let it own every reminder/category control alongside Tasks and Questions. No new store key, no shape change.",
       "acceptance": []
     }
   ]
