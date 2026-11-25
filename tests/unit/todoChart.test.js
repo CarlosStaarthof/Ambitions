@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { createdDate } from "../../src/lib/reminderWall.js";
+import { createdDate, chartGroups, chartSummary } from "../../src/lib/reminderWall.js";
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+const wall = (categories, items) => ({ categories, items });
 
 describe("createdDate", () => {
   // AC-10
@@ -16,6 +17,71 @@ describe("createdDate", () => {
     for (const v of [undefined, null, "", "   ", 42, {}, "not a date"]) {
       expect(createdDate(v)).toBeNull();
     }
+  });
+});
+
+describe("chartGroups", () => {
+  const categories = [
+    { id: "home", name: "Home", color: "#111111" },
+    { id: "work", name: "Work", color: "#222222" },
+    { id: "empty", name: "Empty", color: "#333333" }
+  ];
+
+  it("groups open items by category in wall order, newest first, and drops empty groups", () => {
+    const groups = chartGroups(
+      wall(categories, [
+        { id: "a", categoryId: "work", text: "older work", createdAt: "2026-11-01T10:00:00.000Z" },
+        { id: "b", categoryId: "home", text: "buy milk", createdAt: "2026-11-02T10:00:00.000Z" },
+        { id: "c", categoryId: "work", text: "newer work", createdAt: "2026-11-03T10:00:00.000Z" },
+        { id: "d", categoryId: "home", text: "already done", createdAt: "2026-11-04T10:00:00.000Z", doneAt: "2026-11-05T10:00:00.000Z" }
+      ])
+    );
+    expect(groups.map((g) => g.category.id)).toEqual(["home", "work"]);
+    expect(groups.find((g) => g.category.id === "work").items.map((it) => it.id)).toEqual(["c", "a"]);
+    expect(groups.find((g) => g.category.id === "home").items.map((it) => it.id)).toEqual(["b"]);
+  });
+
+  it("puts an item with a missing category in one Uncategorized group so nothing is hidden", () => {
+    const groups = chartGroups(
+      wall(categories, [
+        { id: "x", categoryId: "gone", text: "orphan one", createdAt: "2026-11-02T10:00:00.000Z" },
+        { id: "y", categoryId: null, text: "orphan two", createdAt: "2026-11-01T10:00:00.000Z" }
+      ])
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0].category.name).toBe("Uncategorized");
+    expect(groups[0].items.map((it) => it.id)).toEqual(["x", "y"]);
+  });
+
+  it("returns no groups for an empty or malformed wall and never mutates it", () => {
+    expect(chartGroups(undefined)).toEqual([]);
+    expect(chartGroups(wall([], []))).toEqual([]);
+    const w = wall(categories, [{ id: "a", categoryId: "home", text: "x", createdAt: "2026-11-01T10:00:00.000Z" }]);
+    chartGroups(w);
+    expect(w.items[0].text).toBe("x");
+  });
+});
+
+describe("chartSummary", () => {
+  it("counts open and done items and rounds the completed share", () => {
+    const s = chartSummary(
+      wall([], [
+        { id: "a", text: "one", createdAt: "2026-11-01T10:00:00.000Z" },
+        { id: "b", text: "two", createdAt: "2026-11-02T10:00:00.000Z" },
+        { id: "c", text: "three", createdAt: "2026-11-03T10:00:00.000Z", doneAt: "2026-11-04T10:00:00.000Z" }
+      ])
+    );
+    expect(s).toEqual({ open: 2, done: 1, total: 3, donePercent: 33 });
+  });
+
+  it("is 0% on an empty wall, never NaN", () => {
+    expect(chartSummary(undefined)).toEqual({ open: 0, done: 0, total: 0, donePercent: 0 });
+    expect(chartSummary(wall([], []))).toEqual({ open: 0, done: 0, total: 0, donePercent: 0 });
+  });
+
+  it("reaches 100% when every item is done", () => {
+    const s = chartSummary(wall([], [{ id: "a", text: "x", createdAt: "2026-11-01T10:00:00.000Z", doneAt: "2026-11-02T10:00:00.000Z" }]));
+    expect(s.donePercent).toBe(100);
   });
 });
 
@@ -73,6 +139,15 @@ describe("Records and To-Do's Chart (source-read)", () => {
     expect(chart).toMatch(/it\.doneAt/);
     expect(chart).toMatch(/addedLabel\(it\.createdAt\)/);
     expect(chart).not.toMatch(/deleteReminder/);
+  });
+
+  it("shapes the board with the pure helpers and stays one column on a 390 px width", () => {
+    const chart = read("../../src/components/TodoChartTab.jsx");
+    expect(chart).toMatch(/chartGroups\(reminderWall\)/);
+    expect(chart).toMatch(/chartSummary\(reminderWall\)/);
+    expect(chart).toMatch(/role="progressbar"/);
+    // Single column by default; two columns only from the `sm` breakpoint up.
+    expect(chart).toMatch(/grid gap-2\.5 sm:grid-cols-2/);
   });
 
   // AC-11 / AC-12

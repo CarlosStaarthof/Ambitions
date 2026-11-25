@@ -50,3 +50,28 @@
   (this repo has no component tests; saying otherwise would be false coverage).
 - Later rounds can move additional per-tab backend settings into Records and refine the
   chart's visual grouping.
+
+## Round 2 — chart visual polish and pure shaping
+
+Owner goal, 2026-11-25 (round 2): make the To-Do's Chart visually appealing and easy to
+digest, keep the 390 px layout clean, and never lose an item.
+
+- `src/lib/reminderWall.js` — two additive pure helpers:
+  - `chartGroups(wall)` groups open items by category in wall order, newest first inside a
+    group, drops empty groups, and appends one `Uncategorized` group for any item whose
+    category is missing. No mutation.
+  - `chartSummary(wall)` returns `{ open, done, total, donePercent }`, with `0` (never
+    `NaN`) for an empty/malformed wall.
+- `src/components/TodoChartTab.jsx` — rebuilt for the board: a compact summary card with
+  open/done counts and an accessible progress bar (`role="progressbar"`), category stacks
+  with count chips, post-it cards with a coloured left edge, a `Clock` + `Added <date>`
+  stamp and a taller Done target; a friendlier empty state. The grid is one column until
+  the `sm` breakpoint, so 390 px stays a single readable stack. Done view sorts newest
+  first and shows category, created and done dates read-only.
+- `tests/unit/todoChart.test.js` — now 17 tests: added `chartGroups` (order, newest-first,
+  empty groups, orphan bucket, no mutation) and `chartSummary` (counts, rounding, 0%/100%)
+  plus a source check for the pure helpers, the progress bar and the one-column mobile
+  grid. Existing AC source tests unchanged and still green.
+
+Gate: `npm test --silent` → 10 files, 250 tests passed; `bash init.sh` →
+`[OK] build green, tests green, scope clean`.

@@ -120,6 +120,39 @@ export function archivedReminders(items) {
     .sort((a, b) => newest(a.doneAt, b.doneAt));
 }
 
+// Shapes the To-Do's Chart in one place so the component only renders. Open items
+// keep their category's wall order and newest-first order within a group; an item
+// whose category is missing still lands in a read-only Uncategorized group, so no
+// captured commitment can be invisible on the board. Empty groups are dropped.
+export function chartGroups(wall) {
+  const w = asRawWall(wall);
+  const open = activeReminders(w.items);
+  const groups = w.categories
+    .map((category) => ({ category, items: open.filter((it) => it.categoryId === category.id) }))
+    .filter((g) => g.items.length > 0);
+
+  const known = new Set(w.categories.map((c) => c.id));
+  const orphans = open.filter((it) => !known.has(it.categoryId));
+  if (orphans.length > 0) {
+    groups.push({
+      category: { id: UNCATEGORIZED_ID, name: "Uncategorized", color: UNCATEGORIZED_COLOR },
+      items: orphans
+    });
+  }
+  return groups;
+}
+
+// The two numbers the board leads with, plus the share already done so the header
+// can show progress without the component recomputing. An empty wall is 0%, never
+// NaN, because the bar is rendered from this value directly.
+export function chartSummary(wall) {
+  const { items } = asRawWall(wall);
+  const open = activeReminders(items).length;
+  const done = archivedReminders(items).length;
+  const total = open + done;
+  return { open, done, total, donePercent: total === 0 ? 0 : Math.round((done / total) * 100) };
+}
+
 export function categoryUsage(wall, categoryId) {
   const { items } = asRawWall(wall);
   return items.filter((it) => it && it.categoryId === categoryId).length;
