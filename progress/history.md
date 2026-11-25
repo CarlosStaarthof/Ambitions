@@ -11,3 +11,4 @@ reaches `done`.
 | 2026-11-25 | 14 records-todo-chart | `specs/features/014-records-todo-chart.md` | `progress/review_mww2v497.md` — APPROVED, 12/12 proven by test (AC-8 source-level), device checks pending |
 | 2026-11-25 | 16 todo-undo-window | `specs/features/016-todo-undo-window.md` | `progress/review_todo-undo-window.md` — APPROVED, 12/12 proven by test (AC-10 source-level), rendered layout merits a visual check |
 | 2026-11-25 | 19 notifications-preferences | `specs/features/019-notifications-preferences.md` | `progress/review_notifications-preferences.md` — APPROVED, AC-1..8,11,12 proven by test, AC-9/10 verified by source inspection |
+| 2026-11-25 | 23 records-tabs | `specs/features/023-records-tabs.md` | `progress/review_records-tabs.md` — APPROVED, 6/6 proven by source-read tests, two-level tab bar at 390 px merits a visual check |

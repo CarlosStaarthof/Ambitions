@@ -352,7 +352,7 @@
       "id": 23,
       "name": "records-tabs",
       "title": "Records sub-tabs named after the main sections",
-      "status": "in_review",
+      "status": "done",
       "spec": "specs/features/023-records-tabs.md",
       "depends_on": [
         14,
@@ -366,7 +366,8 @@
         "AC-4: `AppMenu.jsx` and the `App.jsx` `SECTION_LABEL` map are unchanged: `tasks` still reads `Records` and `reminders` still reads `To-Do's Chart` in the main menu.",
         "AC-5: No stored shape, localForage key, settings default or export version changes; the only files touched are `src/App.jsx`, the test files and docs.",
         "AC-6: `npm test --silent` passes, including a source-read test asserting the tab arrays and mounts above."
-      ]
+      ],
+      "review": "progress/review_records-tabs.md"
     }
   ]
 }

@@ -145,7 +145,9 @@ the section they serve. Tasks and Questions fall under **Plan & Balance**, and t
   where it pinned the old flat `Tasks / Questions / Reminders` array; intent unchanged.
 - Status `pending` → `in_review`. Gate: `npm test --silent` → 18 files, 362 tests;
   `bash init.sh` → `[OK]`.
-- Remaining: reviewer approval; then the leader marks feature 23 `done`. Web-only change,
-  so no `cap:sync`; device check is only reading the two tab levels at 390 px.
+- Round 2: independent reviewer `APPROVED` (`progress/review_records-tabs.md`), all six
+  ACs proven, gate re-run green (18 files, 362 tests, `[OK]`). Leader marked feature 23
+  `done`; no code changed this round.
 - Deferred: a Vision Board sub-tab inside Records, until it has a management surface.
+- Device check still only reading the two tab levels at 390 px; web-only, no `cap:sync`.
 
